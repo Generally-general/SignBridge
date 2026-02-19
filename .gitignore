@@ -1,0 +1,20 @@
+# Java
+target/
+*.class
+.lsbatch/
+
+# Node/React
+node_modules/
+.env
+build/
+
+# Python
+__pycache__/
+.venv/
+venv/
+*.pyc
+
+# IDEs
+.idea/
+.vscode/
+.DS_Store
