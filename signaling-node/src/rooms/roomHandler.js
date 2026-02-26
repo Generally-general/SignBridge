@@ -1,5 +1,4 @@
 export const registerSocketEvents = (io, socket) => {
-
   socket.on("join-room", ({ roomId }) => {
     socket.join(roomId);
     console.log(`${socket.id} joined room ${roomId}`);
