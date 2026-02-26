@@ -13,6 +13,9 @@ __pycache__/
 .venv/
 venv/
 *.pyc
+SIgnbridge_env
+.env
+*.py[cod]
 
 # IDEs
 .idea/
