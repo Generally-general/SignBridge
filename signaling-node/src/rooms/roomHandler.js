@@ -19,4 +19,8 @@ export const registerSocketEvents = (io, socket) => {
   socket.on("disconnect", () => {
     console.log(`User disconnected: ${socket.id}`);
   });
+
+  socket.on("metadata-stream", (data) => {
+    socket.to(data.roomId).emit("metadata-stream", data);
+  });
 };
