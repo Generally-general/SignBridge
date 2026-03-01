@@ -1,5 +1,4 @@
 export const registerSocketEvents = (io, socket) => {
-
   socket.on("join-room", ({ roomId }) => {
     socket.join(roomId);
     console.log(`${socket.id} joined room ${roomId}`);
@@ -19,5 +18,9 @@ export const registerSocketEvents = (io, socket) => {
 
   socket.on("disconnect", () => {
     console.log(`User disconnected: ${socket.id}`);
+  });
+
+  socket.on("metadata-stream", (data) => {
+    socket.to(data.roomId).emit("metadata-stream", data);
   });
 };
