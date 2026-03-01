@@ -1,4 +1,6 @@
 import cv2 
+from fastapi import FastAPI
+import requests
 import mediapipe as mp 
 import time
 
@@ -39,6 +41,12 @@ while True:
                 hand_landmarks,
                 mp_hands.HAND_CONNECTIONS
             )
+            response = requests.post(
+                "http://127.0.0.1:8000/predict",
+                json={"landmarks": coords}
+            )
+
+            print(response.json())
 
     # FPS calculation
     curr_time = time.time()
