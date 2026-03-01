@@ -1,7 +1,7 @@
 from fastapi import FastAPI # type: ignore
 from pydantic import BaseModel
 from typing import List
-
+from app.gesture import detect_gesture
 
 app = FastAPI(title="SignBridge AI Service")
 
@@ -15,9 +15,9 @@ def home():
 
 @app.post("/predict")
 def predict(data: HandData):
+    word = detect_gesture(data.landmarks)
 
-    # temporary mock response
     return {
-        "gesture": "HELLO",
-        "received_points": len(data.landmarks)
+        "word": word
     }
+
