@@ -7,21 +7,37 @@ const VideoCall = () => {
     const peerConnection = useRef(null);
     const [subtitle, setSubtitle] = useState("");
 
-    const roomId = new URLSearchParams(window.location.search).get("room");
-
+    const roomId =
+        new URLSearchParams(window.location.search).get("room") || "test-room";
 
     useEffect(() => {
-        startCall();
+
+        socket.on("connect", () => {
+            console.log("Socket connected:", socket.id);
+
+            startCall();
+
+           
+            const interval = setInterval(() => {
+                socket.emit("metadata-stream", {
+                    roomId,
+                    userId: "123",
+                    timestamp: Date.now(),
+                    gestureText: "I NEED WATER",
+                    hands: [],
+                    face: { emotion: "neutral" }
+                });
+            }, 5000);
+
+            
+            socket._aiInterval = interval;
+        });
+
         socket.on("offer", async (data) => {
             await peerConnection.current.setRemoteDescription(data.offer);
-
             const answer = await peerConnection.current.createAnswer();
             await peerConnection.current.setLocalDescription(answer);
-
-            socket.emit("answer", {
-                answer,
-                roomId
-            });
+            socket.emit("answer", { answer, roomId });
         });
 
         socket.on("answer", async (data) => {
@@ -31,26 +47,29 @@ const VideoCall = () => {
         socket.on("ice-candidate", async (data) => {
             await peerConnection.current.addIceCandidate(data.candidate);
         });
+
         socket.on("metadata-stream", (data) => {
             console.log("Received metadata:", data);
             setSubtitle(data.gestureText);
         });
 
-        setInterval(() => {
-            socket.emit("metadata-stream", {
-                roomId,
-                gestureText: "HELLO",
-            });
-        }, 5000);
+        socket.on("connect_error", (err) => {
+            console.log("Socket connection error:", err.message);
+        });
 
         return () => {
+            socket.off("connect");
             socket.off("offer");
             socket.off("answer");
             socket.off("ice-candidate");
             socket.off("metadata-stream");
-        };
-    }, []);
 
+            if (socket._aiInterval) {
+                clearInterval(socket._aiInterval);
+            }
+        };
+
+    }, []);
     const startCall = async () => {
         peerConnection.current = new RTCPeerConnection();
         const stream = await navigator.mediaDevices.getUserMedia({
@@ -92,7 +111,11 @@ const VideoCall = () => {
         });
     };
 
-
+    const getSubtitleColor = () => {
+        if (!subtitle) return "white";
+        if (subtitle.includes("!")) return "red";
+        return "white";
+    };
 
     return (
         <div style={{ position: "relative" }}>
@@ -102,7 +125,7 @@ const VideoCall = () => {
                 position: "absolute",
                 bottom: "20px",
                 background: "black",
-                color: "white",
+                color: getSubtitleColor(),
                 padding: "10px"
             }}>
                 {subtitle}
