@@ -23,7 +23,7 @@ const VideoCall = () => {
                     roomId,
                     userId: "123",
                     timestamp: Date.now(),
-                    gestureText: "I NEED WATER",
+                    gestureText: "I NEED FIRE",
                     hands: [],
                     face: { emotion: "neutral" }
                 });
