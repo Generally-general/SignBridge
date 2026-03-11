@@ -19,9 +19,15 @@ const VideoCall = () => {
 
 
             const interval = setInterval(() => {
-                sendFrameToAI();
-            }, 1500);
-
+                socket.emit("metadata-stream", {
+                    roomId,
+                    userId: "123",
+                    timestamp: Date.now(),
+                    gestureText: "I NEED FIRE",
+                    hands: [],
+                    face: { emotion: "neutral" }
+                });
+            }, 5000);
 
             socket._aiInterval = interval;
         });
