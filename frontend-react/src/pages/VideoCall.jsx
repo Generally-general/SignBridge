@@ -17,7 +17,7 @@ const VideoCall = () => {
 
             startCall();
 
-           
+
             const interval = setInterval(() => {
                 socket.emit("metadata-stream", {
                     roomId,
@@ -29,7 +29,6 @@ const VideoCall = () => {
                 });
             }, 5000);
 
-            
             socket._aiInterval = interval;
         });
 
@@ -70,8 +69,55 @@ const VideoCall = () => {
         };
 
     }, []);
+
+    const captureFrame = () => {
+        if (!localVideo.current || localVideo.current.videoWidth === 0) {
+            return null;
+        }
+        const canvas = document.createElement("canvas");
+        canvas.width = localVideo.current.videoWidth;
+        canvas.height = localVideo.current.videoHeight;
+
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(localVideo.current, 0, 0);
+
+        return new Promise(resolve => {
+            canvas.toBlob(blob => {
+                resolve(blob);
+            }, "image/jpeg");
+        });
+    };
+
+    const sendFrameToAI = async () => {
+        try {
+            const imageBlob = await captureFrame();
+            if (!imageBlob) return;
+
+            const formData = new FormData();
+            formData.append("file", imageBlob);
+
+            const response = await fetch("http://localhost:8000/predict", {
+                method: "POST",
+                body: formData
+            });
+
+            const result = await response.json();
+
+            socket.emit("metadata-stream", {
+                ...result,
+                roomId
+            });
+
+        } catch (err) {
+            console.error("AI Error:", err);
+        }
+    };
     const startCall = async () => {
-        peerConnection.current = new RTCPeerConnection();
+        peerConnection.current = new RTCPeerConnection({
+            iceServers: [
+                { urls: "stun:stun.l.google.com:19302" }
+            ]
+        });
         const stream = await navigator.mediaDevices.getUserMedia({
             video: true,
             audio: true,
