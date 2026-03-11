@@ -26,8 +26,8 @@ class FullInput(BaseModel):
 def home():
     return {"message": "AI Service Running"}
 
-@app.post("/process")
-def process(data: FullInput):
+@app.post("/predict")
+def predict(data: FullInput):
 
     word = detect_gesture(data.landmarks)
 
