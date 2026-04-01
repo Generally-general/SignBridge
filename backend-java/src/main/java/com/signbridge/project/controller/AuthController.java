@@ -1,53 +1,47 @@
 package com.signbridge.project.controller;
 
+import com.signbridge.project.dto.*;
 import com.signbridge.project.entity.User;
+import com.signbridge.project.service.AuthService;
 import com.signbridge.project.service.UserService;
-import com.signbridge.project.util.JwtUtil;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.HashMap;
-import java.util.Map;
 
 @RestController
 @RequestMapping("/api/auth")
+@RequiredArgsConstructor
 public class AuthController {
     private final UserService userService;
-    private final JwtUtil jwtUtil;
-
-    public AuthController(UserService userService, JwtUtil jwtUtil) {
-        this.userService = userService;
-        this.jwtUtil = jwtUtil;
-    }
+    private final AuthService authService;
 
     @PostMapping("/register")
-    public ResponseEntity<?> register(@RequestBody User user) {
-        User savedUser = userService.saveUser(user);
-        return ResponseEntity.ok("User registered successfully with id: " + savedUser.getId());
-    }
+    public ResponseEntity<ApiResponse<UserResponse>> register(
+            @RequestBody UserRequest request
+    ) {
+        UserResponse response = authService.registerUser(request);
 
-    @GetMapping("/check-user")
-    public ResponseEntity<?> checkUser(@RequestParam String email) {
-        User user = userService.getUserByEmail(email);
-        if(user != null) {
-            return ResponseEntity.ok(user);
-        }
-        return ResponseEntity.status(404).body("User not found");
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(new ApiResponse<>(true, "Registration Successful", response));
     }
 
     @PostMapping("/login")
-    public ResponseEntity<?> login(@RequestBody User loginRequest) {
-        User user = userService.loginUser(loginRequest.getEmail(), loginRequest.getPassword());
+    public ResponseEntity<ApiResponse<LoginResponse>> login(
+            @Valid @RequestBody LoginRequest request
+    ) {
+        LoginResponse response = authService.login(request.getEmail(), request.getPassword());
+        return ResponseEntity.ok(new ApiResponse<>(true, "Login Successful", response));
+    }
 
-        if(user != null) {
-            String token = jwtUtil.generateToken(user.getEmail(), user.getId());
-
-            Map<String, Object> response = new HashMap<>();
-            response.put("token", token);
-            response.put("user", user);
-            return ResponseEntity.ok(response);
-        } else {
-            return ResponseEntity.status(401).body("Invalid credentials");
-        }
+    @GetMapping("/me")
+    public ResponseEntity<ApiResponse<UserResponse>> getMe(
+            @AuthenticationPrincipal User authenticatedUser
+    ) {
+        return ResponseEntity.ok(
+                new ApiResponse<>(true, "Profile fetched", authService.toResponse(authenticatedUser))
+        );
     }
 }

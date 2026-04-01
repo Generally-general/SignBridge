@@ -81,6 +81,13 @@
 			<scope>runtime</scope>
 		</dependency>
 
+		<dependency>
+			<groupId>org.jspecify</groupId>
+			<artifactId>jspecify</artifactId>
+			<version>0.3.0</version> <!-- Use the latest version -->
+		</dependency>
+
+
 		<!-- JSON Serializer -->
 		<dependency>
 		<groupId>io.jsonwebtoken</groupId>
