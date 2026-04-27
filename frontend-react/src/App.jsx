@@ -10,12 +10,19 @@ import { DashboardPage } from './pages/DashboardPage';
 import { CallPage } from './pages/CallPage';
 import { SettingsPage } from './pages/SettingsPage';
 
+import IncomingCallModal from './components/ui/IncomingCallModal';
+
 function App() {
   return (
     <Router>
       <AuthProvider>
+        {/* CallProvider must be inside AuthProvider to access user tokens */}
         <CallProvider>
           <div className="bg-gradient-to-br from-slate-900 to-indigo-900 min-h-screen">
+            
+            {/* 2. Global Modal: Listens for signaling events across all pages */}
+            <IncomingCallModal />
+
             <Routes>
               {/* Public Routes */}
               <Route path="/login" element={<LoginPage />} />

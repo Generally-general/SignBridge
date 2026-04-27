@@ -22,11 +22,12 @@ public class UserController {
 
     @GetMapping
     public ResponseEntity<ApiResponse<Page<UserResponse>>> getAllUsers(
+            @AuthenticationPrincipal User authenticatedUser,
             @RequestParam(required = false) String email,
             @PageableDefault(size = 10, sort = "id")
             Pageable pageable
     ) {
-        Page<UserResponse> page = userService.getUsers(email, pageable);
+        Page<UserResponse> page = userService.getUsers(authenticatedUser.getId(), email, pageable);
         return ResponseEntity.ok(new ApiResponse<>(true, "Users fetched", page));
     }
 

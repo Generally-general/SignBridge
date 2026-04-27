@@ -1,17 +1,31 @@
-import React, { useRef, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import React, { useRef, useEffect } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 
-export const VideoFrame = ({ 
-  stream, 
-  isLocal = false, 
-  className = '',
-  objectFit = 'cover'
+export const VideoFrame = ({
+  stream,
+  muted,
+  className = "",
+  objectFit = "cover",
+  isLocal = false,
+  showPlaceholder = false,
 }) => {
   const videoRef = useRef(null);
 
   useEffect(() => {
-    if (videoRef.current && stream) {
-      videoRef.current.srcObject = stream;
+    const video = videoRef.current;
+
+    if (!video) return;
+
+    if (stream) {
+      video.srcObject = stream;
+
+      video.onloadedmetadata = () => {
+        video.play().catch((e) => console.error("Video play failed:", e));
+      };
+    } else {
+      video.pause();
+      video.srcObject = null;
+      video.load(); // 💥 forces repaint
     }
   }, [stream]);
 
@@ -23,24 +37,35 @@ export const VideoFrame = ({
       transition={{ duration: 0.4 }}
     >
       <video
+        key={stream ? stream.id : "no-stream"}
         ref={videoRef}
         autoPlay
-        muted={isLocal}
+        muted={muted}
         playsInline
-        className={`w-full h-full object-${objectFit}`}
+        className={`w-full h-full object-${objectFit} ${showPlaceholder ? "opacity-0" : "opacity-100"}`}
       />
-      {!stream && (
-        <div className="absolute inset-0 flex items-center justify-center bg-slate-900/50">
-          <div className="text-center">
-            <div className="w-16 h-16 bg-white/10 rounded-full mx-auto mb-4 flex items-center justify-center">
-              <span className="text-2xl">📹</span>
+
+      <AnimatePresence>
+        {showPlaceholder && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="absolute inset-0 flex items-center justify-center bg-slate-900 z-10"
+          >
+            <div className="text-center">
+              <div className="w-20 h-20 bg-white/5 rounded-full mx-auto mb-4 flex items-center justify-center border border-white/10">
+                <span className="text-3xl filter grayscale opacity-50">
+                  {isLocal ? "👤" : "📡"}
+                </span>
+              </div>
+              <p className={`text-white/40 text-[10px] font-bold uppercase tracking-[0.2em] ${isLocal ? 'scale-x-[-1]' : ''}`}>
+                {isLocal ? "Camera Muted" : "Feed Paused"}
+              </p>
             </div>
-            <p className="text-white/70 text-sm">
-              {isLocal ? 'Local camera' : 'Waiting for video...'}
-            </p>
-          </div>
-        </div>
-      )}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 };

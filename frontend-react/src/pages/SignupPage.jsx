@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { User, Mail, Lock } from 'lucide-react';
+import { User, Mail, Lock, EyeOff, Eye } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { authService } from '../services/authService';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Alert } from '../components/ui/Alert';
 import { validateEmail, validatePassword, validateName, getErrorMessage } from '../utils/validators';
+import AuthLayout from '../components/layout/AuthLayout';
 
 export const SignupPage = () => {
   const [name, setName] = useState('');
@@ -17,8 +18,10 @@ export const SignupPage = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [errors, setErrors] = useState({});
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  const { login } = useAuth();
+
   const navigate = useNavigate();
 
   const validateForm = () => {
@@ -63,9 +66,10 @@ export const SignupPage = () => {
     setError(null);
 
     try {
-      const response = await authService.register(name, email, password);
-      login(response.user, response.token);
-      navigate('/');
+      await authService.register(name, email, password);
+      navigate('/login', {
+        state: {message: 'Account created successfully! Please sign in.'}
+      })
     } catch (err) {
       setError(getErrorMessage(err));
     } finally {
@@ -74,34 +78,7 @@ export const SignupPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-indigo-900 to-slate-900 flex items-center justify-center p-4">
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="w-full max-w-md"
-      >
-        {/* Logo */}
-        <div className="text-center mb-8">
-          <motion.div
-            whileHover={{ scale: 1.1, rotate: 5 }}
-            className="w-16 h-16 bg-gradient-to-br from-cyan-400 to-blue-500 rounded-lg flex items-center justify-center mx-auto mb-4"
-          >
-            <span className="text-white font-bold text-3xl">SB</span>
-          </motion.div>
-          <h1 className="text-3xl font-bold text-white">SignBridge</h1>
-          <p className="text-white/60 mt-2">Real-time Sign Language Video Calling</p>
-        </div>
-
-        {/* Form Card */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.2 }}
-          className="bg-white/10 backdrop-blur-md border border-white/20 rounded-lg p-8"
-        >
-          <h2 className="text-2xl font-bold text-white mb-6">Create Account</h2>
-
+    <AuthLayout>
           {error && (
             <Alert
               type="error"
@@ -134,22 +111,55 @@ export const SignupPage = () => {
 
             <Input
               label="Password"
-              type="password"
+              type={showPassword ? "text" : "password"}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               error={errors.password}
               placeholder="••••••••"
-              icon={<Lock className="w-5 h-5" />}
+              icon={
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="text-[#09090B] hover:text-[#A1A1AA] transition-colors focus:outline-none cursor-pointer"
+            >
+              {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+            </button>
+          }
             />
+
+            {/* <Input
+          label="Password"
+          type={showPassword ? "text" : "password"}
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          error={errors.password}
+          placeholder="••••••••"
+          icon={
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="text-[#09090B] hover:text-[#A1A1AA] transition-colors focus:outline-none cursor-pointer"
+            >
+              {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+            </button>
+          } */}
 
             <Input
               label="Confirm Password"
-              type="password"
+              type={showConfirmPassword ? "text" : "password"}
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               error={errors.confirmPassword}
               placeholder="••••••••"
-              icon={<Lock className="w-5 h-5" />}
+              icon={
+            <button
+              type="button"
+              onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+              className="text-[#09090B] hover:text-[#A1A1AA] transition-colors focus:outline-none cursor-pointer"
+            >
+              {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+            </button>
+          }
             />
 
             <Button
@@ -174,18 +184,7 @@ export const SignupPage = () => {
               </Link>
             </p>
           </div>
-        </motion.div>
 
-        {/* Footer */}
-        <motion.p
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.4 }}
-          className="text-center text-white/50 text-sm mt-8"
-        >
-          Secure video calling for the Deaf community
-        </motion.p>
-      </motion.div>
-    </div>
+        </AuthLayout>
   );
 };

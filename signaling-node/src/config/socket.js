@@ -5,7 +5,7 @@ import { registerSocketEvents } from "../rooms/roomHandler.js";
 export const initializeSocket = (server) => {
   const io = new Server(server, {
     cors: {
-      origin: "*",
+      origin: "http://localhost:5173",
       methods: ["GET", "POST"]
     }
   });
@@ -13,7 +13,7 @@ export const initializeSocket = (server) => {
   io.use(verifySocketToken);
 
   io.on("connection", (socket) => {
-    console.log("User connected:", socket.id);
+    console.log("User connected:", socket.userId);
     registerSocketEvents(io, socket);
   });
 };

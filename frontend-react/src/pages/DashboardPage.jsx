@@ -36,21 +36,24 @@ export const DashboardPage = () => {
   const loadData = async () => {
     try {
       setLoading(true);
-      const rawuser = localStorage.getItem('signbridge_user') || localStorage.getItem('user')
-      const storedUser = JSON.parse(rawuser);
+      const rawUser = localStorage.getItem('signbridge_user') || localStorage.getItem('user');
+      const currentUser = JSON.parse(rawUser);
 
-      if(!storedUser || !storedUser.id) {
+      if(!currentUser || !currentUser.id) {
         console.error("No user ID found in storage");
         return;
       }
 
-      console.log("Fetching history for User ID:", storedUser.id);
+      console.log("Fetching history for user Id:", currentUser.id);
+      
 
       const [usersData, historyData] = await Promise.all([
         userService.getAllUsers(),
-        historyService.getCallHistory(storedUser.id)
+        historyService.getCallHistory(currentUser.id)
       ]);
-      setContacts(usersData);
+
+      const otherUsers = usersData.filter(user => user.id != currentUser.id);
+      setContacts(otherUsers);
       setCallHistory(historyData);
     } catch (error) {
       console.error("Dashboard load failed", error);
@@ -62,12 +65,17 @@ export const DashboardPage = () => {
 }, []);
 
   const handleInitiateCall = (contact) => {
+    try {
     startCall({
       id: contact.id,
       contactName: contact.fullName || contact.email,
       timestamp: new Date(),
     });
     navigate("/call");
+    } catch (error) {
+      console.error("Failed to start call handshake");
+      
+    }
   };
 
   return (

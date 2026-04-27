@@ -23,16 +23,17 @@ public class UserService {
     }
 
     public Page<UserResponse> getUsers(
+            Integer currentUserId,
             String email,
             Pageable pageable
     ) {
         Page<User> page;
-        if(email != null) {
+        if(email != null && !email.isEmpty()) {
             page = userRepository
-                    .findByEmailContainingIgnoreCase(
-                            email, pageable);
+                    .findByEmailContainingIgnoreCaseAndIdNot(
+                            email, currentUserId, pageable);
         } else {
-            page = userRepository.findAll(pageable);
+            page = userRepository.findAllByIdNot(currentUserId, pageable);
         }
 
         return page.map(this::toResponse);

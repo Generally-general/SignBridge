@@ -1,18 +1,20 @@
 import jwt from "jsonwebtoken"
 
 export const verifySocketToken = (socket, next) => {
-    try{
-        const token = socket.handshake.auth.token;
 
-        if(!token) {
-            return next(new Error("Authentication error"));
-        }
+    const token = socket.handshake.auth?.token || socket.handshake.headers?.authorization;
 
-        const decoded = jwt.verify(token,process.env.JWT_SECRET);
-        socket.user = decoded;
+    if (!token) {
+        return next(new Error("Authentication error"));
+    }
+
+    try {
+        const cleanToken = token.replace('Bearer ', '');
+        const decoded = jwt.verify(cleanToken, process.env.JWT_SECRET);
+        socket.userId = decoded.userId;
 
         next();
-    } catch(err) {
-        next(new Error("Invalid Token"));
+    } catch (error) {
+        next(new Error('Authentication error: Invalid token'));
     }
 };
