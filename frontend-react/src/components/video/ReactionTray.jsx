@@ -27,17 +27,22 @@ export const ReactionTray = () => {
   // "click" (not "pointerdown") so it also works with the hand pointer, which sends clicks.
   useEffect(() => {
     if (!open) return undefined;
-    const onOutside = (e) => {
-      if (rootRef.current && !rootRef.current.contains(e.target))
+    const closeIfOutside = (target) => {
+      if (rootRef.current && !(target && rootRef.current.contains(target)))
         setOpen(false);
     };
+    const onClick = (e) => closeIfOutside(e.target);
+    const onTap = (e) =>
+      closeIfOutside(document.elementFromPoint(e.detail.x, e.detail.y));
     const onKey = (e) => {
       if (e.key === "Escape") setOpen(false);
     };
-    document.addEventListener("click", onOutside, true);
+    document.addEventListener("click", onClick, true);
+    window.addEventListener("sb-pointer-tap", onTap);
     document.addEventListener("keydown", onKey);
     return () => {
-      document.removeEventListener("click", onOutside, true);
+      document.removeEventListener("click", onClick, true);
+      window.removeEventListener("sb-pointer-tap", onTap);
       document.removeEventListener("keydown", onKey);
     };
   }, [open]);

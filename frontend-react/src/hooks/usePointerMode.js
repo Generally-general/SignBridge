@@ -70,7 +70,7 @@ const createStore = () => {
  *
  * Cost control: no per-frame hit test (see utils/pointerTargets.js) and no per-frame React render.
  */
-export const usePointerMode = ({ enabled = true, dwell = false, mirror = true, onWave, } = {}) => {
+export const usePointerMode = ({ enabled = true, dwell = false, mirror = true, onWave, onDrag } = {}) => {
   const supported = pointerSupported();
   const [latched, setLatched] = useState(false);
   const active = enabled && supported && POINTER_BISECT !== "inert" && latched;
@@ -83,6 +83,9 @@ export const usePointerMode = ({ enabled = true, dwell = false, mirror = true, o
   mirrorRef.current = mirror;
   const onWaveRef = useRef(onWave);
   onWaveRef.current = onWave;
+  const onDragRef = useRef(onDrag);
+  onDragRef.current = onDrag;
+
   const waveSamples = useRef([]);
   const waveCooldownUntil = useRef(0);
 
@@ -119,6 +122,7 @@ export const usePointerMode = ({ enabled = true, dwell = false, mirror = true, o
   const resetInteraction = useCallback(() => {
     filters.current.x.reset();
     filters.current.y.reset();
+    if (pinch.current?.dragging) onDragRef.current?.("end");
     pinch.current = null;
     waveSamples.current = [];
     dwellState.current = { el: null, since: 0, fired: false };
@@ -213,6 +217,7 @@ export const usePointerMode = ({ enabled = true, dwell = false, mirror = true, o
       if (!landmarks) {
         if (now - lastSeen.current > CFG.LOST_MS && store.get().visible) {
           // Losing the hand cancels a pinch in progress; it must not turn into a click.
+          if (pinch.current?.dragging) onDragRef.current?.("end");
           pinch.current = null;
           waveSamples.current = [];
           setHover(null);
@@ -242,13 +247,16 @@ export const usePointerMode = ({ enabled = true, dwell = false, mirror = true, o
       if (!wasPinched && dist < CFG.PINCH_ENGAGE) {
         // One real hit test per pinch: what is under the cursor, and does it scroll?
         const under = document.elementFromPoint(x, y);
+        const grab = under?.closest?.("[data-pointer-drag]") || null;
         pinch.current = {
           t: now,
           x,
           y,
           lastY: y,
-          target: clickableFrom(under),
-          scroller: scrollableFrom(under),
+          drag: grab,
+          dragging: false,
+          target: grab ? null : clickableFrom(under),
+          scroller: grab ? null : scrollableFrom(under),
           scrolling: false,
         };
       } else if (wasPinched) {
@@ -256,8 +264,27 @@ export const usePointerMode = ({ enabled = true, dwell = false, mirror = true, o
         if (dist > CFG.PINCH_RELEASE) {
           const quick = now - p.t <= CFG.CLICK_MAX_MS;
           const still = Math.hypot(x - p.x, y - p.y) <= CFG.CLICK_DRIFT_PX;
-          if (!p.scrolling && quick && still && p.target?.isConnected) click(p.target);
+          const announceTap = () =>
+            window.dispatchEvent(
+              new CustomEvent("sb-pointer-tap", { detail: { x: p.x, y: p.y } }),
+            );
+          if (p.dragging) onDragRef.current?.("end");
+          else if (p.drag) {
+            if (quick && still) {
+              onDragRef.current?.("tap");
+              announceTap();
+            }
+          } else if (!p.scrolling && quick && still) {
+            if (p.target?.isConnected) click(p.target);
+            else announceTap(); // pinched on empty space: let panels like the tray close
+          }
           pinch.current = null;
+        } else if (p.drag) {
+          if (!p.dragging && Math.hypot(x - p.x, y - p.y) > CFG.DRAG_ARM_PX) {
+            p.dragging = true;
+            onDragRef.current?.("start", p.x, p.y);
+          }
+          if (p.dragging) onDragRef.current?.("move", x, y);
         } else {
           if (!p.scrolling && p.scroller && Math.abs(y - p.y) > CFG.SCROLL_ARM_PX) {
             p.scrolling = true;
@@ -282,6 +309,7 @@ export const usePointerMode = ({ enabled = true, dwell = false, mirror = true, o
         !pinched &&
         target &&
         !target.hasAttribute("data-pointer-confirm") &&
+        !target.hasAttribute("data-pointer-drag") &&
         !/^(INPUT|SELECT|TEXTAREA)$/.test(target.tagName);
       if (dwellable) {
         if (d.el !== target) {

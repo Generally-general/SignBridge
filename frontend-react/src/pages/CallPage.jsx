@@ -116,6 +116,7 @@ export const CallPage = () => {
   });
 
   const pointerPrefs = usePointerPrefs();
+  const dragHandlerRef = useRef(null);
   const pointer = usePointerMode({
     enabled: pointerPrefs.enabled && cameraEnabled,
     dwell: pointerPrefs.dwell,
@@ -123,6 +124,7 @@ export const CallPage = () => {
     onWave: () => {
       if (sendAttention()) flashFeedback("✋ Wave sent");
     },
+    onDrag: (...args) => dragHandlerRef.current?.(...args),
   });
   const pointerActiveRef = useRef(false);
   pointerActiveRef.current = pointer.active;
@@ -259,6 +261,29 @@ export const CallPage = () => {
     },
   };
 
+  const handDrag = useRef(null);
+  dragHandlerRef.current = (phase, x, y) => {
+    const pip = pipRef.current;
+    const stage = stageRef.current;
+    if (phase === "tap") {
+      setSwapped((s) => !s);
+    } else if (phase === "start" && pip && stage) {
+      const r = pip.getBoundingClientRect();
+      const s = stage.getBoundingClientRect();
+      handDrag.current = {
+        sx: x,
+        sy: y,
+        ox: r.left - s.left,
+        oy: r.top - s.top,
+      };
+    } else if (phase === "move" && handDrag.current) {
+      const d = handDrag.current;
+      setPipPos(clampPos(d.ox + x - d.sx, d.oy + y - d.sy));
+    } else if (phase === "end") {
+      handDrag.current = null;
+    }
+  };
+
   if (!activeCall) return null;
 
   const mainBox = "absolute inset-0 z-0";
@@ -295,6 +320,7 @@ export const CallPage = () => {
           }
           style={remoteMovable ? pipStyle : undefined}
           {...(remoteMovable ? pipHandlers : {})}
+          {...(remoteMovable ? { "data-pointer-target": "", "data-pointer-drag": "" } : {})}
         >
           <VideoFrame
             stream={remoteStream}
@@ -328,6 +354,7 @@ export const CallPage = () => {
           }
           style={localMovable ? pipStyle : undefined}
           {...(localMovable ? pipHandlers : {})}
+          {...(localMovable ? { "data-pointer-target": "", "data-pointer-drag": "" } : {})}
         >
           <VideoFrame
             stream={localStream}

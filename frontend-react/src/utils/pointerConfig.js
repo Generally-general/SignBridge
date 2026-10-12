@@ -16,6 +16,8 @@ export const POINTER_CONFIG = {
   CLICK_MAX_MS: 800, // a pinch held longer than this is not a click
   CLICK_DRIFT_PX: 40, // and neither is one where the hand moved this far
 
+  DRAG_ARM_PX: 14,
+
   SCROLL_ARM_PX: 16, // vertical travel while pinched that starts a scroll
   SCROLL_GAIN: 1.2, // scroll pixels per cursor pixel
 

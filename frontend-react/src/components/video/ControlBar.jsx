@@ -63,20 +63,25 @@ export const ControlBar = ({ onEndCall }) => {
   const [menuOpen, setMenuOpen] = useState(false);
   const barRef = useRef(null);
 
-  // Close the menu on an outside click or Escape.
+  // Close the menu on an outside click, an outside hand-pointer tap, or Escape.
   useEffect(() => {
     if (!menuOpen) return;
-    const onDown = (e) => {
-      if (barRef.current && !barRef.current.contains(e.target))
+    const closeIfOutside = (target) => {
+      if (barRef.current && !(target && barRef.current.contains(target)))
         setMenuOpen(false);
     };
+    const onClick = (e) => closeIfOutside(e.target);
+    const onTap = (e) =>
+      closeIfOutside(document.elementFromPoint(e.detail.x, e.detail.y));
     const onKey = (e) => {
       if (e.key === "Escape") setMenuOpen(false);
     };
-    document.addEventListener("pointerdown", onDown);
+    document.addEventListener("click", onClick, true);
+    window.addEventListener("sb-pointer-tap", onTap);
     document.addEventListener("keydown", onKey);
     return () => {
-      document.removeEventListener("pointerdown", onDown);
+      document.removeEventListener("click", onClick, true);
+      window.removeEventListener("sb-pointer-tap", onTap);
       document.removeEventListener("keydown", onKey);
     };
   }, [menuOpen]);
