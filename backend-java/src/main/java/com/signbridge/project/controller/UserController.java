@@ -20,6 +20,10 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import com.signbridge.project.dto.ChangePasswordRequest;
+import com.signbridge.project.dto.LoginResponse;
+import com.signbridge.project.service.AuthService;
+import jakarta.validation.Valid;
 
 import java.util.List;
 
@@ -30,6 +34,7 @@ import java.util.List;
 public class UserController {
     private final UserService userService;
     private final ContactService contactService;
+    private final AuthService authService;
 
     /**
      * Same response shape the dashboard already reads, but it now lists only the caller's contacts.
@@ -54,6 +59,13 @@ public class UserController {
     @GetMapping("/me")
     public ResponseEntity<ApiResponse<UserResponse>> me(@AuthenticationPrincipal User me) {
         return ResponseEntity.ok(new ApiResponse<>(true, "Profile fetched", userService.toResponse(me)));
+    }
+
+    @PutMapping("/me/password")
+    public ResponseEntity<ApiResponse<LoginResponse>> changePassword(
+            @AuthenticationPrincipal User me, @Valid @RequestBody ChangePasswordRequest body) {
+        return ResponseEntity.ok(new ApiResponse<>(true, "Password changed",
+                authService.changePassword(me.getId(), body.currentPassword(), body.newPassword())));
     }
 
     @PutMapping("/me")

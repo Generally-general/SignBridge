@@ -1,5 +1,6 @@
 package com.signbridge.project.service;
 
+import com.signbridge.project.entity.User;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;
@@ -9,6 +10,9 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 
 import javax.crypto.SecretKey;
+import java.time.Instant;
+import java.time.ZoneOffset;
+import java.time.temporal.ChronoUnit;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
@@ -65,7 +69,18 @@ public class JwtService {
 
     public boolean isTokenValid(String token, UserDetails userDetails) {
         final String username = extractUsername(token);
-        return (username.equals(userDetails.getUsername())) && !isTokenExpired(token);
+        if (!username.equals(userDetails.getUsername()) || isTokenExpired(token)) {
+            return false;
+        }
+        if (userDetails instanceof User account && account.getPasswordChangedAt() != null) {
+            Date issuedAt = extractClaim(token, Claims::getIssuedAt);
+            Instant changedAt = account.getPasswordChangedAt().toInstant(ZoneOffset.UTC)
+                    .truncatedTo(ChronoUnit.SECONDS);
+            if (issuedAt == null || issuedAt.toInstant().isBefore(changedAt)) {
+                return false;
+            }
+        }
+        return true;
     }
 
     private boolean isTokenExpired(String token) {

@@ -38,6 +38,7 @@ public class User implements UserDetails {
 
     private Boolean searchable;
     private LocalDateTime callsClearedAt;
+    private LocalDateTime passwordChangedAt;
 
     public boolean isDiscoverable() {
         return searchable == null || searchable;

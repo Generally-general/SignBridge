@@ -11,4 +11,6 @@ export const userService = {
 
   // Send only the fields that changed: { fullName?, username?, searchable? }
   updateProfile: async (changes) => unwrap(await api.put("/users/me", changes)),
+  changePassword: async (currentPassword, newPassword) =>
+    unwrap(await api.put("/users/me/password", { currentPassword, newPassword })),
 };

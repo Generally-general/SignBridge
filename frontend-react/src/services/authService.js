@@ -28,6 +28,18 @@ export const authService = {
     }
   },
 
+  forgotPassword: async (email) => {
+    const response = await api.post('/auth/forgot-password', { email });
+    if (response.data.success) return response.data.message;
+    throw new Error(response.data.message || 'Could not send the reset link');
+  },
+
+  resetPassword: async (token, newPassword) => {
+    const response = await api.post('/auth/reset-password', { token, newPassword });
+    if (response.data.success) return true;
+    throw new Error(response.data.message || 'Could not reset the password');
+  },
+
   usernameAvailable: async (username) => {
     const response = await api.get('/auth/username-available', { params: { u: username } });
     if (response.data.success) return response.data.data;

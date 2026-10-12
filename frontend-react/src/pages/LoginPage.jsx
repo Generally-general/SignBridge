@@ -59,9 +59,15 @@ export const LoginPage = () => {
 
   return (
     <AuthLayout title="Welcome Back">
-      {error && <Alert variant="error" className="mb-6">{error}</Alert>}
+      {error && (
+        <Alert variant="error" className="mb-6">
+          {error}
+        </Alert>
+      )}
       {location.state?.message && (
-        <Alert variant="success" className="mb-6">{location.state.message}</Alert>
+        <Alert variant="success" className="mb-6">
+          {location.state.message}
+        </Alert>
       )}
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
@@ -92,6 +98,15 @@ export const LoginPage = () => {
           }
         />
 
+        <div className="-mt-2 text-right">
+          <Link
+            to="/forgot-password"
+            className="text-[12px] text-primary font-semibold hover:text-primary/80 transition-colors"
+          >
+            Forgot password?
+          </Link>
+        </div>
+
         <Button type="submit" isLoading={loading} fullWidth className="mt-2">
           Sign In
         </Button>
@@ -100,7 +115,10 @@ export const LoginPage = () => {
       <div className="mt-6 text-center">
         <p className="text-[13px] text-text-secondary">
           Don't have an account?{" "}
-          <Link to="/signup" className="text-primary font-semibold hover:text-primary/80 transition-colors">
+          <Link
+            to="/signup"
+            className="text-primary font-semibold hover:text-primary/80 transition-colors"
+          >
             Sign up
           </Link>
         </p>

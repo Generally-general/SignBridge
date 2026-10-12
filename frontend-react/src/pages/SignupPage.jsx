@@ -56,7 +56,7 @@ export const SignupPage = () => {
     if (!password) {
       newErrors.password = "Password is required";
     } else if (!validatePassword(password)) {
-      newErrors.password = "Password must be at least 6 characters";
+      newErrors.password = "Password must be at least 8 characters";
     }
 
     if (!confirmPassword) {

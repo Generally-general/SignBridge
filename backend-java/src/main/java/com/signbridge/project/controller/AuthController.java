@@ -3,6 +3,7 @@ package com.signbridge.project.controller;
 import com.signbridge.project.dto.*;
 import com.signbridge.project.entity.User;
 import com.signbridge.project.service.AuthService;
+import com.signbridge.project.service.PasswordResetService;
 import com.signbridge.project.service.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -17,6 +18,7 @@ import org.springframework.web.bind.annotation.*;
 public class AuthController {
     private final UserService userService;
     private final AuthService authService;
+    private final PasswordResetService passwordResetService;
 
     @PostMapping("/register")
     public ResponseEntity<ApiResponse<UserResponse>> register(
@@ -34,6 +36,19 @@ public class AuthController {
     ) {
         LoginResponse response = authService.login(request.getEmail(), request.getPassword());
         return ResponseEntity.ok(new ApiResponse<>(true, "Login Successful", response));
+    }
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<ApiResponse<Void>> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
+        passwordResetService.requestReset(request.email());
+        return ResponseEntity.ok(new ApiResponse<>(true,
+                "If an account exists for that email, a reset link is on its way.", null));
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<ApiResponse<Void>> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
+        passwordResetService.resetPassword(request.token(), request.newPassword());
+        return ResponseEntity.ok(new ApiResponse<>(true, "Password updated", null));
     }
 
     @GetMapping("/username-available")
