@@ -219,6 +219,7 @@ export const ControlBar = ({ onEndCall }) => {
 
       <button
         onClick={onEndCall}
+        data-pointer-confirm
         className={`${btn} bg-danger text-white hover:bg-danger/90`}
         title="End call"
       >

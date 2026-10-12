@@ -25,6 +25,9 @@ import { useSignDetection } from "../hooks/useSignDetection";
 import { usePoseDetection } from "../hooks/usePoseDetection";
 import { useFaceDetection } from "../hooks/useFaceDetection";
 import { useSpatialTouch } from "../hooks/useSpatialTouch";
+import { usePointerMode } from "../hooks/usePointerMode";
+import { usePointerPrefs } from "../hooks/usePointerPrefs";
+import { PointerOverlay } from "../components/video/PointerOverlay";
 import {
   SPATIAL_TOUCH_CONFIG,
   isSpatialDebugEnabled,
@@ -109,6 +112,17 @@ export const CallPage = () => {
       : undefined,
   });
 
+  const pointerPrefs = usePointerPrefs();
+  const pointer = usePointerMode({
+    enabled: pointerPrefs.enabled && cameraEnabled,
+    dwell: pointerPrefs.dwell,
+    mirror: facingMode === "user",
+  });
+  const pointerActiveRef = useRef(false);
+  pointerActiveRef.current = pointer.active;
+  const pointerFrameRef = useRef(pointer.processFrame);
+  pointerFrameRef.current = pointer.processFrame;
+
   // Hand tracking runs whenever the camera is on (Spatial Touch needs it).
   // Landmarks are only sent for translation when MY translation toggle is on.
   const translationEnabledRef = useRef(translationEnabled);
@@ -116,7 +130,7 @@ export const CallPage = () => {
   const broadcastLandmarksRef = useRef(broadcastLandmarks);
   broadcastLandmarksRef.current = broadcastLandmarks;
   const gatedBroadcast = useCallback((landmarks, hands) => {
-    if (translationEnabledRef.current)
+    if (translationEnabledRef.current && !pointerActiveRef.current)
       broadcastLandmarksRef.current?.(landmarks, hands);
   }, []);
 
@@ -125,7 +139,12 @@ export const CallPage = () => {
   const processFrameRef = useRef(spatialTouch.processFrame);
   processFrameRef.current = spatialTouch.processFrame;
   const onHandFrame = useCallback((points, meta) => {
-    processFrameRef.current?.(points, meta);
+    if (pointerActiveRef.current) {
+      pointerFrameRef.current?.(points);
+      processFrameRef.current?.(null, meta); // the old pinch-scroll rests while pointing
+    } else {
+      processFrameRef.current?.(points, meta);
+    }
     sendSkeletonRef.current?.(meta?.hands ?? []);
   }, []);
 
@@ -363,6 +382,7 @@ export const CallPage = () => {
             {stFeedback}
           </div>
         )}
+        <PointerOverlay pointer={pointer} />
         {stDebug && (
           <SpatialTouchDebugHud
             metricsRef={spatialTouch.metricsRef}
