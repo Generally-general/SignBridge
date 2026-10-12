@@ -28,6 +28,9 @@ public class SecurityConfig {
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final AuthenticationProvider authenticationProvider;
 
+    @Value("${signbridge.cors-origins:}")
+    private List<String> extraOrigins;
+
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http.csrf(AbstractHttpConfigurer::disable)
@@ -50,8 +53,7 @@ public class SecurityConfig {
     }
 
     @Bean
-    public CorsConfigurationSource corsConfigurationSource(
-            @Value("${signbridge.cors-origins:}") List<String> extraOrigins) {
+    public CorsConfigurationSource corsConfigurationSource() {
         List<String> origins = new ArrayList<>(
                 List.of("http://localhost:*", "http://192.168.*.*:*", "http://10.*.*.*:*", "https://localhost:*",
                         "https://192.168.*.*:*", "https://10.*.*.*:*", "https://*.devtunnels.ms"));
