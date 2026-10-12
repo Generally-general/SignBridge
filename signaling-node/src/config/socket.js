@@ -1,11 +1,12 @@
 import { Server } from "socket.io";
 import { verifySocketToken } from "../middleware/authMiddleware.js";
 import { registerSocketEvents } from "../rooms/roomHandler.js";
+import { corsOrigin } from "./corsOrigin.js";
 
 export const initializeSocket = (server) => {
   const io = new Server(server, {
     cors: {
-      origin: true,
+      origin: corsOrigin,
       methods: ["GET", "POST"]
     },
     pingInterval: 8000,

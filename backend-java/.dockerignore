@@ -1,0 +1,5 @@
+target
+certs
+.git
+*.md
+src/main/resources/application-local.properties

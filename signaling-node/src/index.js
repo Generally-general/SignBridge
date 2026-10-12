@@ -5,10 +5,11 @@ import https from "https";
 import fs from "fs";
 import cors from "cors";
 import { initializeSocket } from "./config/socket.js";
+import { corsOrigin } from "./config/corsOrigin.js";
 
 
 const app = express();
-app.use(cors({ origin: true }));
+app.use(cors({ origin: corsOrigin }));
 app.use(express.json());
 
 const { SSL_CERT_PATH, SSL_KEY_PATH } = process.env;

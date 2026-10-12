@@ -15,6 +15,8 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.beans.factory.annotation.Value;
+import java.util.ArrayList;
 
 import java.util.List;
 
@@ -48,11 +50,15 @@ public class SecurityConfig {
     }
 
     @Bean
-    public CorsConfigurationSource corsConfigurationSource() {
-        CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOriginPatterns(
+    public CorsConfigurationSource corsConfigurationSource(
+            @Value("${signbridge.cors-origins:}") List<String> extraOrigins) {
+        List<String> origins = new ArrayList<>(
                 List.of("http://localhost:*", "http://192.168.*.*:*", "http://10.*.*.*:*", "https://localhost:*",
                         "https://192.168.*.*:*", "https://10.*.*.*:*", "https://*.devtunnels.ms"));
+        origins.addAll(extraOrigins);
+
+        CorsConfiguration configuration = new CorsConfiguration();
+        configuration.setAllowedOriginPatterns(origins);
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("Authorization", "Content-Type", "Cache-Control"));
         configuration.setAllowCredentials(true);
