@@ -1,0 +1,20 @@
+{
+  "feature_version": 1,
+  "T": 32,
+  "feature_dim": 258,
+  "temperature": 0.75,
+  "n_classes": 50,
+  "metrics": {
+    "test_top1": 0.84375,
+    "test_top5": 0.921875,
+    "n_test": 192,
+    "val_top1": 0.935064935064935,
+    "n_val": 77,
+    "n_train_videos": 689,
+    "train_sequences_with_augmentation": 8957
+  },
+  "dropped_videos": [],
+  "dataset": "INCLUDE-50 (AI4Bharat / IIT Madras), CC BY 4.0, https://doi.org/10.1145/3394171.3413528",
+  "note": "hands only, 2 hands, x/y; position-free features; BiGRU; test split = official INCLUDE-50 test list",
+  "trained_at": "2026-10-07 06:12:10"
+}

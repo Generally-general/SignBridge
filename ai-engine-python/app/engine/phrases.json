@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "phrases": [
+    { "signs": ["HELLO", "THUMBS_UP"], "sentence": "Hello, nice to meet you!" },
+    { "signs": ["HELLO", "OK"], "sentence": "Hello, how are you?" },
+    { "signs": ["HELLO", "OK", "THUMBS_UP"], "sentence": "Hello, how are you? I am fine, thank you." },
+    { "signs": ["OK", "THUMBS_UP"], "sentence": "I am fine, thank you." },
+    { "signs": ["THUMBS_UP", "OK"], "sentence": "Thank you very much." },
+    { "signs": ["HELLO", "I_LOVE_YOU"], "sentence": "Hello, I love you all!" },
+    { "signs": ["HELLO", "CALL_ME"], "sentence": "Hello, please call me." },
+    { "signs": ["LETTER_I", "I_LOVE_YOU"], "sentence": "I love you too." },
+    { "signs": ["CALL_ME"], "sentence": "Please call me." },
+    { "signs": ["FIST", "OK"], "sentence": "Please wait a moment." },
+    { "signs": ["PEACE", "THUMBS_UP"], "sentence": "Peace and best wishes!" },
+    { "signs": ["ROCK", "THUMBS_UP"], "sentence": "That rocks!" },
+    { "signs": ["ROCK", "OK"], "sentence": "Let's go!" },
+    { "signs": ["LETTER_R", "OK"], "sentence": "Are you ready?" },
+    { "signs": ["LETTER_R", "THUMBS_UP"], "sentence": "I am ready." },
+    { "signs": ["L_OR_GUN", "THUMBS_UP"], "sentence": "Looks good!" },
+    { "signs": ["ONE", "THUMBS_UP"], "sentence": "You are number one!" },
+    { "signs": ["THREE", "OK"], "sentence": "Three, okay." }
+  ]
+}
