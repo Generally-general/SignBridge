@@ -1,14 +1,16 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Bell, KeyRound, Type, User, Video } from "lucide-react";
+import { ArrowLeft, Bell, Hand, KeyRound, Type, User, Video } from "lucide-react";
 import { ProfileCard } from "../components/contacts/ProfileCard";
 import { ChangePasswordCard } from "../components/settings/ChangePasswordCard";
+import { SignCardCard } from "../components/settings/SignCardCard";
 import { CallAlertsCard } from "../components/settings/CallAlertsCard";
 import { DevicesCard } from "../components/settings/DevicesCard";
 import { CaptionsCard } from "../components/settings/CaptionsCard";
 
 const SECTIONS = [
   { id: "profile", label: "Profile", Icon: User },
+  { id: "card", label: "Sign card", Icon: Hand },
   { id: "alerts", label: "Call alerts", Icon: Bell },
   { id: "devices", label: "Camera and audio", Icon: Video },
   { id: "captions", label: "Speech captions", Icon: Type },
@@ -83,6 +85,7 @@ export const SettingsPage = () => {
 
           <div className="space-y-10 min-w-0 pb-16">
             <ProfileCard />
+            <SignCardCard />
             <ChangePasswordCard />
             <CallAlertsCard />
             <DevicesCard />

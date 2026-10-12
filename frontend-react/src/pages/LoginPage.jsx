@@ -7,6 +7,7 @@ import { Button } from "../components/ui/Button";
 import { Input } from "../components/ui/Input";
 import { Alert } from "../components/ui/Alert";
 import { validateEmail, getErrorMessage } from "../utils/validators";
+import { pendingCard } from "../utils/pendingCard";
 import AuthLayout from "../components/layout/AuthLayout";
 
 export const LoginPage = () => {
@@ -49,7 +50,8 @@ export const LoginPage = () => {
     try {
       const response = await authService.login(email, password);
       login(response.userResponse, response.token);
-      navigate("/");
+      const pending = pendingCard.get();
+      navigate(pending ? `/c/${encodeURIComponent(pending)}` : "/");
     } catch (err) {
       setError(getErrorMessage(err));
     } finally {

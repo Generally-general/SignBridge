@@ -8,6 +8,7 @@ import { LoginPage } from './pages/LoginPage';
 import { SignupPage } from './pages/SignupPage';
 import { ForgotPasswordPage } from './pages/ForgotPasswordPage';
 import { ResetPasswordPage } from './pages/ResetPasswordPage';
+import { CardPage } from './pages/CardPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { CallPage } from './pages/CallPage';
 import { SettingsPage } from './pages/SettingsPage';
@@ -34,6 +35,7 @@ function App() {
               <Route path="/signup" element={<SignupPage />} />
 
               <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+              <Route path="/c/:token" element={<CardPage />} />
               <Route path="/reset-password" element={<ResetPasswordPage />} />
 
               {/* Protected Routes */}
