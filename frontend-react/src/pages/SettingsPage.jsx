@@ -11,7 +11,7 @@ const SECTIONS = [
   { id: "profile", label: "Profile", Icon: User },
   { id: "alerts", label: "Call alerts", Icon: Bell },
   { id: "devices", label: "Camera and audio", Icon: Video },
-  { id: "captions", label: "Speech captions", Icon: Type }
+  { id: "captions", label: "Speech captions", Icon: Type },
   { id: "security", label: "Password", Icon: KeyRound },
 ];
 
