@@ -16,6 +16,13 @@ import { callAlerts } from "../utils/callAlerts";
 import { callMediaConstraints } from "../utils/devicePrefs";
 import { encodeFrame, decodeFrame, isNewer } from "../utils/skeletonCodec";
 import {
+  ATTENTION_ACCEPT_GAP_MS,
+  ATTENTION_COOLDOWN_MS,
+  MAX_VISIBLE_REACTIONS,
+  REACTIONS,
+  REACTION_MIN_GAP_MS,
+} from "../utils/touchEffects";
+import {
   createSpeechRecognizer,
   SPEECH_LANGUAGES,
 } from "../services/speech/speechRecognizer";
@@ -125,6 +132,11 @@ export const CallProvider = ({ children }) => {
   const skeletonModeRef = useRef(false);
   const skelFrames = useRef(null);
   const skelCtrl = useRef(null);
+  const touchCh = useRef(null);
+  const touchSeq = useRef(0);
+  const touchTimes = useRef({ react: 0, wave: 0, gotWave: 0 });
+  const [reactions, setReactions] = useState([]); // { id, emoji, own }
+  const [attention, setAttention] = useState(null); // { id } while the other person's wave shows
   const skelSeq = useRef(0);
   const skelLastSentAt = useRef(0);
   const skelLastEmpty = useRef(false);
@@ -295,6 +307,10 @@ export const CallProvider = ({ children }) => {
       needsRenegotiate.current = false;
       skelFrames.current = null;
       skelCtrl.current = null;
+      touchCh.current = null;
+      touchTimes.current = { react: 0, wave: 0, gotWave: 0 };
+      setReactions([]);
+      setAttention(null);
       skeletonModeRef.current = false;
       skelLastEmpty.current = false;
       remoteSkelRef.current = {
@@ -656,6 +672,31 @@ export const CallProvider = ({ children }) => {
         };
         skelFrames.current = frames;
         skelCtrl.current = ctrl;
+        const touch = pc0.createDataChannel("touch", {
+          negotiated: true,
+          id: 3,
+        });
+        touch.onmessage = (e) => {
+          try {
+            const m = JSON.parse(e.data);
+            if (m?.t === "reaction" && REACTIONS.includes(m.e)) {
+              const id = ++touchSeq.current;
+              setReactions((list) => [
+                ...list.slice(-(MAX_VISIBLE_REACTIONS - 1)),
+                { id, emoji: m.e, own: false },
+              ]);
+            } else if (m?.t === "attention") {
+              const now = performance.now();
+              if (now - touchTimes.current.gotWave < ATTENTION_ACCEPT_GAP_MS)
+                return;
+              touchTimes.current.gotWave = now;
+              setAttention({ id: ++touchSeq.current });
+            }
+          } catch {
+            /* ignore malformed messages */
+          }
+        };
+        touchCh.current = touch;
       }
 
       if (stream) {
@@ -1352,6 +1393,38 @@ export const CallProvider = ({ children }) => {
     [activeCall, user],
   );
 
+  const sendReaction = useCallback((emoji) => {
+    if (!REACTIONS.includes(emoji)) return;
+    const now = performance.now();
+    if (now - touchTimes.current.react < REACTION_MIN_GAP_MS) return;
+    touchTimes.current.react = now;
+    const id = ++touchSeq.current;
+    setReactions((list) => [
+      ...list.slice(-(MAX_VISIBLE_REACTIONS - 1)),
+      { id, emoji, own: true },
+    ]);
+    const ch = touchCh.current;
+    if (ch?.readyState === "open")
+      ch.send(JSON.stringify({ t: "reaction", e: emoji }));
+  }, []);
+
+  // Returns true when the wave was actually sent (open channel and not within the cooldown).
+  const sendAttention = useCallback(() => {
+    const ch = touchCh.current;
+    const now = performance.now();
+    if (ch?.readyState !== "open") return false;
+    if (now - touchTimes.current.wave < ATTENTION_COOLDOWN_MS) return false;
+    touchTimes.current.wave = now;
+    ch.send(JSON.stringify({ t: "attention" }));
+    return true;
+  }, []);
+
+  const dismissReaction = useCallback(
+    (id) => setReactions((list) => list.filter((r) => r.id !== id)),
+    [],
+  );
+  const dismissAttention = useCallback(() => setAttention(null), []);
+
   const getConnectionStats = useCallback(async () => {
     const pc = peerConnection.current;
     return pc ? pc.getStats() : null;
@@ -1409,9 +1482,15 @@ export const CallProvider = ({ children }) => {
     const since = now - skelLastSentAt.current;
     const pose = skelPose.current;
     const face = skelFace.current;
-    
+
     if (since < 50) return;
-    if (empty && skelLastEmpty.current && !pose.fresh && !face.fresh && since < 500)
+    if (
+      empty &&
+      skelLastEmpty.current &&
+      !pose.fresh &&
+      !face.fresh &&
+      since < 500
+    )
       return;
     skelLastEmpty.current = empty;
     skelLastSentAt.current = now;
@@ -1655,6 +1734,12 @@ export const CallProvider = ({ children }) => {
         setSkeletonFace,
         remoteSkelRef,
         skelStats,
+        reactions,
+        sendReaction,
+        dismissReaction,
+        attention,
+        sendAttention,
+        dismissAttention,
       }}
     >
       {children}

@@ -22,4 +22,9 @@ export const POINTER_CONFIG = {
   DWELL_MS: 700,
   LOST_MS: 300, // hide the cursor when the hand has been missing this long
   LATCH_IDLE_MS: 8000, // latched mode switches off after this long with no hand
+
+  WAVE_WINDOW_MS: 2000,
+  WAVE_MIN_REVERSALS: 4, // direction changes inside the window
+  WAVE_MIN_TRAVEL_PALM: 0.6, // each swing at least this many palm widths
+  WAVE_COOLDOWN_MS: 10000,
 };

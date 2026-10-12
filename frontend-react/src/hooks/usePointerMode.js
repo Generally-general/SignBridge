@@ -9,12 +9,14 @@ import {
   scrollableFrom,
 } from "../utils/pointerGeometry";
 import { createTargetIndex } from "../utils/pointerTargets";
+import { countReversals, isOpenHand } from "../utils/waveDetect";
 import { POINTER_BISECT } from "../utils/pointerPrefs";
 import { isSpatialDebugEnabled } from "../utils/spatialTouchConfig";
 import { distance2D, palmWidth } from "../utils/spatialTouchGeometry";
 
 const THUMB_TIP = 4;
 const INDEX_MCP = 5;
+const MIDDLE_MCP = 9;
 const INDEX_TIP = 8;
 const PINKY_MCP = 17;
 
@@ -68,7 +70,7 @@ const createStore = () => {
  *
  * Cost control: no per-frame hit test (see utils/pointerTargets.js) and no per-frame React render.
  */
-export const usePointerMode = ({ enabled = true, dwell = false, mirror = true } = {}) => {
+export const usePointerMode = ({ enabled = true, dwell = false, mirror = true, onWave, } = {}) => {
   const supported = pointerSupported();
   const [latched, setLatched] = useState(false);
   const active = enabled && supported && POINTER_BISECT !== "inert" && latched;
@@ -79,6 +81,10 @@ export const usePointerMode = ({ enabled = true, dwell = false, mirror = true } 
   dwellRef.current = dwell;
   const mirrorRef = useRef(mirror);
   mirrorRef.current = mirror;
+  const onWaveRef = useRef(onWave);
+  onWaveRef.current = onWave;
+  const waveSamples = useRef([]);
+  const waveCooldownUntil = useRef(0);
 
   const filters = useRef(null);
   if (!filters.current) {
@@ -114,6 +120,7 @@ export const usePointerMode = ({ enabled = true, dwell = false, mirror = true } 
     filters.current.x.reset();
     filters.current.y.reset();
     pinch.current = null;
+    waveSamples.current = [];
     dwellState.current = { el: null, since: 0, fired: false };
     hoverCheck.current = { el: null, ok: false, at: 0 };
     hoverEl.current?.removeAttribute?.("data-pointer-hover");
@@ -185,12 +192,29 @@ export const usePointerMode = ({ enabled = true, dwell = false, mirror = true } 
     return hoverCheck.current.ok ? cand : null;
   }, []);
 
+  const detectWave = (landmarks, pw, now) => {
+    if (!isOpenHand(landmarks)) {
+      waveSamples.current = []; // only continuous open-hand motion counts
+      return;
+    }
+    const s = waveSamples.current;
+    s.push({ t: now, x: landmarks[MIDDLE_MCP][0] });
+    while (s.length && s[0].t < now - CFG.WAVE_WINDOW_MS) s.shift();
+    if (now < waveCooldownUntil.current || s.length < 6) return;
+    if (countReversals(s, CFG.WAVE_MIN_TRAVEL_PALM * pw) >= CFG.WAVE_MIN_REVERSALS) {
+      waveCooldownUntil.current = now + CFG.WAVE_COOLDOWN_MS;
+      waveSamples.current = [];
+      onWaveRef.current?.();
+    }
+  };
+
   const frame = useCallback(
     (landmarks, now) => {
       if (!landmarks) {
         if (now - lastSeen.current > CFG.LOST_MS && store.get().visible) {
           // Losing the hand cancels a pinch in progress; it must not turn into a click.
           pinch.current = null;
+          waveSamples.current = [];
           setHover(null);
           store.set({ visible: false, pinched: false, dwell: 0 });
         }
@@ -247,6 +271,8 @@ export const usePointerMode = ({ enabled = true, dwell = false, mirror = true } 
 
       const pinched = !!pinch.current;
       if (!pinched) setHover(target);
+
+      if (!pinched && onWaveRef.current) detectWave(landmarks, pw, now);
 
       // Dwell: keep still over a button to press it. Never on End call or text fields.
       let progress = 0;

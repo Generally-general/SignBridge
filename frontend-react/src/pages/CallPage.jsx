@@ -28,6 +28,8 @@ import { useSpatialTouch } from "../hooks/useSpatialTouch";
 import { usePointerMode } from "../hooks/usePointerMode";
 import { usePointerPrefs } from "../hooks/usePointerPrefs";
 import { PointerOverlay } from "../components/video/PointerOverlay";
+import { ReactionTray } from "../components/video/ReactionTray";
+import { TouchEffects } from "../components/video/TouchEffects";
 import {
   SPATIAL_TOUCH_CONFIG,
   isSpatialDebugEnabled,
@@ -65,6 +67,7 @@ export const CallPage = () => {
     setSkeletonFace,
     remoteSkelRef,
     skelStats,
+    sendAttention,
   } = useContext(CallContext);
 
   const chatScrollRef = useRef(null);
@@ -117,6 +120,9 @@ export const CallPage = () => {
     enabled: pointerPrefs.enabled && cameraEnabled,
     dwell: pointerPrefs.dwell,
     mirror: facingMode === "user",
+    onWave: () => {
+      if (sendAttention()) flashFeedback("✋ Wave sent");
+    },
   });
   const pointerActiveRef = useRef(false);
   pointerActiveRef.current = pointer.active;
@@ -382,6 +388,8 @@ export const CallPage = () => {
             {stFeedback}
           </div>
         )}
+        <TouchEffects />
+        <ReactionTray />
         <PointerOverlay pointer={pointer} />
         {stDebug && (
           <SpatialTouchDebugHud
