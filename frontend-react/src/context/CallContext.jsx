@@ -1112,9 +1112,15 @@ export const CallProvider = ({ children }) => {
   }, []);
 
   useEffect(() => {
-    if (!user?.id) return;
+    if (!user?.id) {
+      console.warn("🔌 Signaling not started: no user in state");
+      return;
+    }
     const token = tokenStorage.getToken();
-    if (!token) return;
+    if (!token) {
+      console.warn("🔌 Signaling not started: no token in localStorage");
+      return;
+    }
 
     socket.current = io(import.meta.env.VITE_SIGNALING_WS_URL, {
       auth: { token },
@@ -1368,6 +1374,9 @@ export const CallProvider = ({ children }) => {
     });
 
     return () => {
+      console.warn("🔌 Signaling socket torn down", {
+        inCall: !!activeCallRef.current?.roomId,
+      });
       if (socket.current) {
         socket.current.disconnect();
         socket.current = null;
