@@ -19,6 +19,7 @@ import { Button } from "../ui/Button";
 import { initialOf } from "../../utils/contactsUi";
 import { buildCallLog } from "../../utils/callLog";
 import { formatDuration } from "../../utils/formatDuration";
+import { parseServerDate } from "../../utils/serverTime";
 
 const EMPTY_REQUESTS = { incoming: [], outgoing: [] };
 
@@ -365,7 +366,7 @@ export const Sidebar = ({
                       </p>
                       <p className="text-text-muted text-[11px]">
                         {item.when
-                          ? new Date(item.when).toLocaleString([], {
+                          ? parseServerDate(item.when).toLocaleString([], {
                               dateStyle: "short",
                               timeStyle: "short",
                             })
@@ -421,7 +422,7 @@ export const Sidebar = ({
                               "{entry.translatedText}"
                             </p>
                             <span className="text-[10px] text-text-muted shrink-0">
-                              {new Date(entry.timestamp).toLocaleTimeString(
+                              {parseServerDate(entry.timestamp).toLocaleTimeString(
                                 [],
                                 {
                                   hour: "2-digit",

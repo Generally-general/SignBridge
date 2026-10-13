@@ -1,3 +1,5 @@
+import { parseServerDate } from "./serverTime";
+
 export const formatTime = (seconds) => {
   const hours = Math.floor(seconds / 3600);
   const minutes = Math.floor((seconds % 3600) / 60);
@@ -12,7 +14,7 @@ export const formatTime = (seconds) => {
 };
 
 export const formatDate = (date) => {
-  const d = new Date(date);
+  const d = parseServerDate(date);
   return d.toLocaleDateString('en-US', {
     month: 'short',
     day: 'numeric',
@@ -21,7 +23,7 @@ export const formatDate = (date) => {
 };
 
 export const formatDateTime = (date) => {
-  const d = new Date(date);
+  const d = parseServerDate(date);
   return d.toLocaleDateString('en-US', {
     month: 'short',
     day: 'numeric',

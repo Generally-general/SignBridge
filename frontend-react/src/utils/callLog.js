@@ -2,13 +2,14 @@
 //
 // A call that nobody answered is stored as CANCELLED. For the person who was called that is a
 // MISSED call; for the person who called it is "no answer".
+import { parseServerDate } from "./serverTime";
 
 const STALE_RINGING_MS = 2 * 60 * 1000;
 
 export const describeCall = (call, myId, now = Date.now()) => {
   const incoming = Number(call.receiverId) === Number(myId);
   const peerName = (incoming ? call.callerName : call.receiverName) || "Unknown";
-  const created = call.createdAt ? new Date(call.createdAt).getTime() : now;
+  const created = call.createdAt ? parseServerDate(call.createdAt).getTime() : now;
 
   // older data: a call left "ringing" for ever was never answered
   const status = call.status === "RINGING" && now - created > STALE_RINGING_MS ? "CANCELLED" : call.status;
@@ -51,7 +52,7 @@ export const buildCallLog = (calls, entries, myId, now = Date.now()) => {
     .map((group) => {
       const lines = group.entries
         .slice()
-        .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+        .sort((a, b) => parseServerDate(a.timestamp) - parseServerDate(b.timestamp));
       if (group.call) {
         return { roomId: group.roomId, ...describeCall(group.call, myId, now), when: group.call.createdAt, entries: lines };
       }
@@ -67,12 +68,13 @@ export const buildCallLog = (calls, entries, myId, now = Date.now()) => {
         entries: lines,
       };
     })
-    .sort((a, b) => new Date(b.when) - new Date(a.when));
+    .sort((a, b) => parseServerDate(b.when) - parseServerDate(a.when));
 };
 
 // Missed calls newer than the moment the History tab was last looked at.
 export const countUnseenMissed = (calls, myId, seenAtMs, now = Date.now()) =>
   calls.filter(
     (call) =>
-      describeCall(call, myId, now).kind === "missed" && new Date(call.createdAt).getTime() > seenAtMs,
+      describeCall(call, myId, now).kind === "missed" &&
+      parseServerDate(call.createdAt).getTime() > seenAtMs,
   ).length;

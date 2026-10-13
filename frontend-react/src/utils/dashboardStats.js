@@ -1,4 +1,4 @@
-
+import { parseServerDate } from "./serverTime";
 import { describeCall } from "./callLog";
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
@@ -13,7 +13,7 @@ export const greetingFor = (now = new Date()) => {
 
 
 export const timeAgo = (iso, now = Date.now()) => {
-  const t = iso ? new Date(iso).getTime() : NaN;
+  const t = iso ? parseServerDate(iso).getTime() : NaN;
   if (!Number.isFinite(t)) return "";
   const diff = Math.max(0, now - t);
   const min = Math.floor(diff / 60000);
@@ -32,7 +32,7 @@ export const weekStats = (calls, myId, now = Date.now()) => {
   let talkSeconds = 0;
   const people = new Set();
   for (const call of calls) {
-    const created = call.createdAt ? new Date(call.createdAt).getTime() : NaN;
+    const created = call.createdAt ? parseServerDate(call.createdAt).getTime() : NaN;
     if (!Number.isFinite(created) || now - created > WEEK_MS) continue;
     const info = describeCall(call, myId, now);
     if (info.kind !== "completed") continue;
