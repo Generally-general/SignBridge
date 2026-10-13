@@ -31,7 +31,7 @@ export const useFaceDetection = (stream, enabled, onFace, onStatus) => {
         onStatusRef.current?.("loading");
         const mod = await import("@mediapipe/face_mesh");
         if (!alive) return;
-        const FaceMesh = mod.FaceMesh || mod.default?.FaceMesh;
+        const FaceMesh = mod.FaceMesh || mod.default?.FaceMesh || window.FaceMesh;
         mesh = new FaceMesh({
           locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`,
         });

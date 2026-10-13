@@ -1,12 +1,13 @@
 import { useContext, useEffect, useRef } from "react";
-import { Hands } from "@mediapipe/hands";
-import * as cam from "@mediapipe/camera_utils";
+import * as mpHands from "@mediapipe/hands";
 import { CallContext } from "../context/CallContextInstance";
 import { buildHandPayload } from "../utils/handPayload";
 import { runExclusive } from "../utils/mediapipeQueue";
 
 // onLandmarks(firstHandXYZ, hands): called for frames where a hand is visible.
 // maxHands: 2 while translating (many signs use both hands), 1 otherwise (Spatial Touch uses one).
+const resolveHands = () => mpHands.Hands || mpHands.default?.Hands || window.Hands;
+
 export const useSignDetection = (stream, onLandmarks, cameraEnabled, onFrame, maxHands = 1) => {
   const { setTranslationText } = useContext(CallContext);
   const videoRef = useRef(document.createElement("video"));
@@ -29,7 +30,12 @@ export const useSignDetection = (stream, onLandmarks, cameraEnabled, onFrame, ma
     video.playsInline = true;
     video.srcObject = new MediaStream(stream.getVideoTracks());
 
-    const hands = new Hands({
+    const HandsCtor = resolveHands();
+    if (!HandsCtor) {
+      console.error("MediaPipe Hands failed to load (no constructor in this build)");
+      return undefined;
+    }
+    const hands = new HandsCtor({
       locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`,
     });
 

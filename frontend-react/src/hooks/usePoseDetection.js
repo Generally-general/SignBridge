@@ -31,7 +31,7 @@ export const usePoseDetection = (stream, enabled, onPose, onStatus) => {
         onStatusRef.current?.("loading");
         const mod = await import("@mediapipe/pose");
         if (!alive) return;
-        const Pose = mod.Pose || mod.default?.Pose;
+        const Pose = mod.Pose || mod.default?.Pose || window.Pose;
         pose = new Pose({
           locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`,
         });
