@@ -738,7 +738,14 @@ export const CallProvider = ({ children }) => {
           console.log(
             `📡 Sending ICE Candidate to Peer (type: ${event.candidate.type || "unknown"}, proto: ${event.candidate.protocol || "?"}${event.candidate.relayProtocol ? ", relay via " + event.candidate.relayProtocol : ""})`,
           );
-          socket.current.emit("ice-candidate", {
+          const s = socket.current;
+          if (!s) {
+            console.warn(
+              "⚠️ ICE candidate not sent: the signaling socket is gone (logged out, token expired or reconnecting)",
+            );
+            return;
+          }
+          s.emit("ice-candidate", {
             roomId: currentCall.roomId,
             toUserId: currentCall.id,
             candidate: event.candidate,
