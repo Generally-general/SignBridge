@@ -997,7 +997,15 @@ export const CallProvider = ({ children }) => {
     try {
       display = await navigator.mediaDevices.getDisplayMedia({
         video: true,
-        audio: false,
+        audio: {
+          echoCancellation: false,
+          noiseSuppression: false,
+          autoGainControl: false,
+        },
+        // Chromium hints; browsers that don't know them ignore them
+        selfBrowserSurface: "exclude", // hides the call tab, which would feed the other person's voice back to them
+        suppressLocalAudioPlayback: true, // you don't hear the shared tab twice
+        systemAudio: "include",
       });
     } catch (err) {
       if (err?.name !== "NotAllowedError" && err?.name !== "AbortError") {
@@ -1016,6 +1024,15 @@ export const CallProvider = ({ children }) => {
     screenStreamRef.current = display;
     setScreenStream(display);
     screenSenders.current = [pc.addTrack(track, display)];
+    const audioTrack = display.getAudioTracks()[0];
+    if (audioTrack) {
+      screenSenders.current.push(pc.addTrack(audioTrack, display));
+    } else {
+      showNotice(
+        "Sharing without sound. To include it, choose a tab and tick “Share tab audio”.",
+        "info",
+      );
+    }
     // The browser's own "Stop sharing" bar ends the track.
     track.addEventListener("ended", () => stopScreenShareRef.current?.());
 
