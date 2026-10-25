@@ -45,9 +45,4 @@ export const authService = {
     if (response.data.success) return response.data.data;
     throw new Error(response.data.message || 'Could not check username');
   },
-
-  getCurrentUser: async () => {
-    const response = await api.get('/auth/me');
-    return response.data;
-  },
 };

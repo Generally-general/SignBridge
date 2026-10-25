@@ -27,6 +27,7 @@ import { useFaceDetection } from "../hooks/useFaceDetection";
 import { useSpatialTouch } from "../hooks/useSpatialTouch";
 import { usePointerMode } from "../hooks/usePointerMode";
 import { usePointerPrefs } from "../hooks/usePointerPrefs";
+import { usePictureInPicture } from "../hooks/usePictureInPicture";
 import { PointerOverlay } from "../components/video/PointerOverlay";
 import { ReactionTray } from "../components/video/ReactionTray";
 import { TouchEffects } from "../components/video/TouchEffects";
@@ -34,7 +35,7 @@ import {
   SPATIAL_TOUCH_CONFIG,
   isSpatialDebugEnabled,
 } from "../utils/spatialTouchConfig";
-import { Send, Maximize2, Minimize2 } from "lucide-react";
+import { Maximize2, Minimize2 } from "lucide-react";
 
 const DRAG_THRESHOLD_PX = 6;
 const PIP_MARGIN = 8;
@@ -55,8 +56,6 @@ export const CallPage = () => {
     toggleChat,
     translationEnabled,
     broadcastLandmarks,
-    chatMessages,
-    sendChatMessage,
     remoteScreenStream,
     isScreenSharing,
     toggleScreenShare,
@@ -284,6 +283,14 @@ export const CallPage = () => {
     }
   };
 
+  usePictureInPicture(
+    !!remoteStream || !!remoteScreenStream,
+    remoteScreenStream || remoteStream,
+    localStream,
+    cameraEnabled,
+    endCall,
+  );
+
   if (!activeCall) return null;
 
   const mainBox = "absolute inset-0 z-0";
@@ -320,12 +327,15 @@ export const CallPage = () => {
           }
           style={remoteMovable ? pipStyle : undefined}
           {...(remoteMovable ? pipHandlers : {})}
-          {...(remoteMovable ? { "data-pointer-target": "", "data-pointer-drag": "" } : {})}
+          {...(remoteMovable
+            ? { "data-pointer-target": "", "data-pointer-drag": "" }
+            : {})}
         >
           <VideoFrame
             stream={remoteStream}
             isLocal={false}
             objectFit={screenMode || remoteIsPip ? "cover" : fitMode}
+            pipTarget={!screenMode}
             showPlaceholder={
               !remoteStream || !remoteCameraEnabled || remoteSkeleton
             }
@@ -354,7 +364,9 @@ export const CallPage = () => {
           }
           style={localMovable ? pipStyle : undefined}
           {...(localMovable ? pipHandlers : {})}
-          {...(localMovable ? { "data-pointer-target": "", "data-pointer-drag": "" } : {})}
+          {...(localMovable
+            ? { "data-pointer-target": "", "data-pointer-drag": "" }
+            : {})}
         >
           <VideoFrame
             stream={localStream}
@@ -380,6 +392,7 @@ export const CallPage = () => {
           <div className="absolute inset-0 z-[5] bg-black">
             <VideoFrame
               stream={remoteScreenStream}
+              pipTarget
               objectFit="contain"
               className="w-full h-full rounded-none"
             />

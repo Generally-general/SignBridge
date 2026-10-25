@@ -100,7 +100,7 @@ export const CallAlertsCard = () => {
       <div className="p-4 space-y-3">
         {prefs.notify && permission === "denied" && (
           <p className="text-[12px] text-warning">
-            Notifications are blocked for this site. Allow them in the browser's
+            Notifications are blocked for this site. Allow them in the browser&apos;s
             site settings (the icon next to the address).
           </p>
         )}

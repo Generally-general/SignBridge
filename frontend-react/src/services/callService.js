@@ -1,11 +1,10 @@
 import api from './api';
 
-console.log('📒 callService loaded (call-record logging enabled)');
 
 const run = async (label, request) => {
   try {
     const res = await request();
-    console.log(`📒 call record ${label}: ok, status=${res.data?.data?.status}`);
+    
     return res.data.data;
   } catch (e) {
     console.warn(

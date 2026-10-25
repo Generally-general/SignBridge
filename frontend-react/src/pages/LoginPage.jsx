@@ -116,7 +116,7 @@ export const LoginPage = () => {
 
       <div className="mt-6 text-center">
         <p className="text-[13px] text-text-secondary">
-          Don't have an account?{" "}
+          Don&apos;t have an account?{" "}
           <Link
             to="/signup"
             className="text-primary font-semibold hover:text-primary/80 transition-colors"

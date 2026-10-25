@@ -419,7 +419,7 @@ export const Sidebar = ({
                                   :
                                 </span>
                               )}
-                              "{entry.translatedText}"
+                              &ldquo;{entry.translatedText}&ldquo;
                             </p>
                             <span className="text-[10px] text-text-muted shrink-0">
                               {parseServerDate(entry.timestamp).toLocaleTimeString(

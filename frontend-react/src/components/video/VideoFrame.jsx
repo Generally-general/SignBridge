@@ -8,6 +8,7 @@ export const VideoFrame = ({
   objectFit = "cover",
   isLocal = false,
   showPlaceholder = false,
+  pipTarget = false,
 }) => {
   const videoRef = useRef(null);
 
@@ -41,6 +42,7 @@ export const VideoFrame = ({
         autoPlay
         muted={muted}
         playsInline
+        data-pip-target={pipTarget ? "true" : undefined}
         style={{ objectFit }}
         className={`w-full h-full ${showPlaceholder ? "opacity-0" : "opacity-100"}`}
       />

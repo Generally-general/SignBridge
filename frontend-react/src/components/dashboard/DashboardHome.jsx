@@ -360,7 +360,7 @@ export const DashboardHome = ({
                               :
                             </span>
                           )}
-                          "{entry.translatedText}"
+                          &ldquo;{entry.translatedText}&ldquo;
                         </p>
                       ))}
                     </div>

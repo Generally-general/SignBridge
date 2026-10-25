@@ -1,6 +1,5 @@
-import { useContext, useEffect, useRef } from "react";
+import { useEffect, useRef } from "react";
 import * as mpHands from "@mediapipe/hands";
-import { CallContext } from "../context/CallContextInstance";
 import { buildHandPayload } from "../utils/handPayload";
 import { runExclusive } from "../utils/mediapipeQueue";
 
@@ -9,10 +8,8 @@ import { runExclusive } from "../utils/mediapipeQueue";
 const resolveHands = () => mpHands.Hands || mpHands.default?.Hands || window.Hands;
 
 export const useSignDetection = (stream, onLandmarks, cameraEnabled, onFrame, maxHands = 1) => {
-  const { setTranslationText } = useContext(CallContext);
   const videoRef = useRef(document.createElement("video"));
   const handsRef = useRef(null);
-  const cameraRef = useRef(null);
 
   useEffect(() => {
     if (!stream || !cameraEnabled) {

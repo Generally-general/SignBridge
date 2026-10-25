@@ -55,7 +55,6 @@ export const FACE_PARTS = {
 export const FACE_CHIN = 18; // outline point at the chin
 export const FACE_SIDE_A = 8; // outline points at the two sides of the face (for sizing)
 export const FACE_SIDE_B = 28;
-export const FACE_NOSE_TIP = 134;
 
 const SCALE = 10000;
 const HAND_BYTES = HAND_POINTS * 2 * 2;

@@ -587,7 +587,7 @@ export const CallProvider = ({ children }) => {
 
   const toggleTranslation = useCallback(() => {
     setTranslationEnabled((prev) => !prev);
-  });
+  }, []);
 
   useEffect(() => {
     isChatOpenRef.current = isChatOpen;
