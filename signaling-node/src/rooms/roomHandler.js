@@ -1,5 +1,6 @@
 import http from "http";
 import https from "https";
+import webpush from "web-push";
 import { createIceServerProvider } from "./iceServers.js";
 const AI_SERVICE_URL = process.env.AI_SERVICE_URL || "http://localhost:8000";
 const getIceServers = createIceServerProvider({
@@ -44,6 +45,58 @@ function backendRequest(path, method = "GET") {
     req.end();
   });
 }
+
+const PUSH_ENABLED = !!(
+  process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY && process.env.VAPID_SUBJECT
+);
+if (PUSH_ENABLED) {
+  webpush.setVapidDetails(
+    process.env.VAPID_SUBJECT,
+    process.env.VAPID_PUBLIC_KEY,
+    process.env.VAPID_PRIVATE_KEY,
+  );
+}
+const lastMissedPush = new Map(); // "caller>callee" -> time, one push per minute per pair
+
+// "X tried to call you" for a callee with no open socket. Best effort.
+async function pushMissedCall(calleeId, callerId, fromName) {
+  if (!PUSH_ENABLED || !INTERNAL_API_KEY) return;
+  const key = `${callerId}>${calleeId}`;
+  if (Date.now() - (lastMissedPush.get(key) || 0) < 60_000) return;
+  if (lastMissedPush.size > 1000) lastMissedPush.clear();
+  lastMissedPush.set(key, Date.now());
+  try {
+    const res = await backendRequest(`/api/internal/push/${encodeURIComponent(calleeId)}`);
+    const subs = Array.isArray(res.json?.data) ? res.json.data : [];
+    const name = String(fromName || "Someone").replace(/[\r\n]/g, " ").slice(0, 40);
+    const payload = JSON.stringify({
+      title: "Missed call",
+      body: `${name} tried to call you`,
+      url: "/",
+      tag: `missed-${callerId}`,
+    });
+    await Promise.all(
+      subs.map(async (s) => {
+        try {
+          await webpush.sendNotification(
+            { endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } },
+            payload,
+            { TTL: 3600 },
+          );
+        } catch (err) {
+          if (err.statusCode === 404 || err.statusCode === 410) {
+            await backendRequest(`/api/internal/push?endpoint=${encodeURIComponent(s.endpoint)}`, "DELETE").catch(() => {});
+          } else {
+            console.error("Push failed:", err.statusCode || err.message);
+          }
+        }
+      }),
+    );
+  } catch (err) {
+    console.error("Push lookup failed:", err.message);
+  }
+}
+
 const TICK_MARGIN_MS = 80; // added to the engine's "retry_in_ms"
 
 const RING_TIMEOUT_MS = Number(process.env.RING_TIMEOUT_MS) || 40_000;
@@ -391,6 +444,7 @@ export const registerSocketEvents = (io, socket) => {
     if (!isOnline(io, toUserId)) {
       socket.emit("call-unavailable", { roomId, reason: "offline" });
       closeCallRecord(roomId); // they will see it as a missed call
+      pushMissedCall(toUserId, socket.userId, fromName);
       return;
     }
     const reverse = findRingingCall(String(toUserId), String(socket.userId));

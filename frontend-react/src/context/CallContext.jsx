@@ -71,6 +71,21 @@ const hasTurn = (servers) =>
     [].concat(s.urls).some((u) => typeof u === "string" && /^turns?:/.test(u)),
   );
 
+// Debug helpers (console only). Credentials are never logged.
+const describeIceServers = (servers = []) =>
+  servers.map((s) =>
+    (Array.isArray(s.urls) ? s.urls : [s.urls])
+      .map((u) => String(u).split("?")[0])
+      .join(" | "),
+  );
+
+const maskAddr = (a) => {
+  if (!a) return "?";
+  if (a.includes(":")) return `v6:${a.split(":").slice(0, 2).join(":")}::`;
+  const p = a.split(".");
+  return p.length === 4 ? `v4:${p[0]}.${p[1]}.x.x` : "mdns/host";
+};
+
 export const CallProvider = ({ children }) => {
   const { user, logout } = useContext(AuthContext);
   const logoutRef = useRef(logout);
@@ -125,6 +140,8 @@ export const CallProvider = ({ children }) => {
   const resetCallStateRef = useRef(null);
   const callConnectedRef = useRef(false);
   const connectionLostTimer = useRef(null);
+  const iceRestarts = useRef(0);
+  const iceRestartTimer = useRef(null);
   const screenStreamRef = useRef(null);
   const screenSenders = useRef([]);
   const [skeletonMode, setSkeletonMode] = useState(false);
@@ -344,6 +361,8 @@ export const CallProvider = ({ children }) => {
       setCallStartedAt(null);
       callConnectedRef.current = false;
       clearTimeout(connectionLostTimer.current);
+      clearTimeout(iceRestartTimer.current);
+      iceRestarts.current = 0;
       setFacingMode("user");
       setSpeechEnabled(false);
       setSpeechError("");
@@ -605,9 +624,25 @@ export const CallProvider = ({ children }) => {
     async (stream) => {
       console.log("🛠️ Setting up PeerConnection with stream:", stream?.id);
       remoteCandidateStats.current = {};
+      const forceRelay = (() => {
+        try {
+          return localStorage.getItem("sb_force_relay") === "1";
+        } catch {
+          return false;
+        }
+      })();
+      const iceList = iceCache.current.list || FALLBACK_ICE_SERVERS;
       peerConnection.current = new RTCPeerConnection({
-        iceServers: iceCache.current.list || FALLBACK_ICE_SERVERS,
+        iceServers: iceList,
+        ...(forceRelay ? { iceTransportPolicy: "relay" } : {}),
       });
+      const t0 = performance.now();
+      const ts = () => `+${((performance.now() - t0) / 1000).toFixed(1)}s`;
+      const localCands = {};
+      console.log(
+        `🧭 ICE servers (${iceCache.current.list ? "from signaling" : "FALLBACK"}), TURN present: ${hasTurn(iceList)}, policy: ${forceRelay ? "relay" : "all"}: ` +
+          JSON.stringify(describeIceServers(iceList)),
+      );
 
       {
         const pc0 = peerConnection.current;
@@ -733,6 +768,19 @@ export const CallProvider = ({ children }) => {
       };
 
       peerConnection.current.onicecandidate = (event) => {
+        if (event.candidate) {
+          const c = event.candidate;
+          const k = `${c.type}/${c.protocol}${c.relayProtocol ? "(" + c.relayProtocol + ")" : ""}`;
+          localCands[k] = (localCands[k] || 0) + 1;
+          console.log(
+            `📡 ${ts()} local candidate ${k} ${maskAddr(c.address)} url=${c.url || "-"}`,
+          );
+          if (!activeCallRef.current?.roomId) {
+            console.warn(`⚠️ ${ts()} candidate NOT sent: no active call roomId yet`);
+          }
+        } else {
+          console.log(`🏁 ${ts()} gathering done: ${JSON.stringify(localCands)}`);
+        }
         const currentCall = activeCallRef.current;
         if (event.candidate && currentCall?.roomId) {
           console.log(
@@ -757,14 +805,44 @@ export const CallProvider = ({ children }) => {
 
       peerConnection.current.onconnectionstatechange = () => {
         const connState = peerConnection.current.connectionState;
-        console.log("🕸️ Connection State:", connState);
+        console.log(`🕸️ ${ts()} Connection State:`, connState);
         if (connState === "connected") {
           callConnectedRef.current = true;
           setCallStartedAt((t) => t ?? Date.now());
+          iceRestarts.current = 0;
+          clearTimeout(iceRestartTimer.current);
         }
 
         clearTimeout(connectionLostTimer.current);
         if (connState === "disconnected" || connState === "failed") {
+          const pc = peerConnection.current;
+          // Only the caller restarts ICE, so both sides never send offers at once.
+          const canRestart =
+            callConnectedRef.current &&
+            !!pc &&
+            typeof pc.restartIce === "function" &&
+            !activeCallRef.current?.isIncoming &&
+            iceRestarts.current < 3;
+
+          if (canRestart) {
+            clearTimeout(iceRestartTimer.current);
+            iceRestartTimer.current = setTimeout(
+              () => {
+                const p = peerConnection.current;
+                if (!p || p.connectionState === "connected") return;
+                iceRestarts.current += 1;
+                console.warn(`🔁 ICE restart #${iceRestarts.current}`);
+                showNotice(
+                  "Connection unstable, trying to reconnect…",
+                  "warning",
+                );
+                p.restartIce();
+                negotiateRef.current?.();
+              },
+              connState === "failed" ? 0 : 4000, // "disconnected" often heals itself
+            );
+          }
+
           connectionLostTimer.current = setTimeout(
             () => {
               if (
@@ -778,7 +856,7 @@ export const CallProvider = ({ children }) => {
               );
               resetCallStateRef.current?.(true);
             },
-            connState === "failed" ? 3000 : 20000,
+            connState === "failed" ? 15000 : 20000,
           );
         }
 
@@ -794,7 +872,7 @@ export const CallProvider = ({ children }) => {
 
       peerConnection.current.oniceconnectionstatechange = () => {
         console.log(
-          "🧊 ICE Connection State:",
+          `🧊 ${ts()} ICE Connection State:`,
           peerConnection.current.iceConnectionState,
         );
       };
@@ -817,25 +895,61 @@ export const CallProvider = ({ children }) => {
       });
 
       const dumpIceDiagnostics = async (reason) => {
-        console.warn(
-          `🔬 ICE diagnostics (${reason}) — remote candidates applied:`,
-          JSON.stringify(remoteCandidateStats.current),
-        );
-        const stats = await pc.getStats();
-        const byId = {};
-        stats.forEach((r) => (byId[r.id] = r));
-        stats.forEach((r) => {
-          if (r.type === "candidate-pair") {
-            const l = byId[r.localCandidateId];
-            const rm = byId[r.remoteCandidateId];
-            console.warn(
-              `🔬 pair ${l?.candidateType}/${l?.protocol} -> ${rm?.candidateType}/${rm?.protocol} ` +
-                `state=${r.state} nominated=${r.nominated} reqSent=${r.requestsSent} ` +
-                `respRecv=${r.responsesReceived} sent=${r.bytesSent} recv=${r.bytesReceived}`,
-            );
-          }
-        });
+        try {
+          const stats = await pc.getStats();
+          const byId = {};
+          stats.forEach((r) => (byId[r.id] = r));
+          const cand = (id) => {
+            const c = byId[id];
+            return c
+              ? `${c.candidateType}/${c.protocol}${c.relayProtocol ? "(" + c.relayProtocol + ")" : ""} ${maskAddr(c.address || c.ip)}`
+              : "?";
+          };
+          const pairs = [];
+          let transport = null;
+          stats.forEach((r) => {
+            if (r.type === "candidate-pair") {
+              pairs.push(
+                `${cand(r.localCandidateId)} -> ${cand(r.remoteCandidateId)} state=${r.state} nominated=${r.nominated} ` +
+                  `reqSent=${r.requestsSent} reqRecv=${r.requestsReceived} respRecv=${r.responsesReceived} ` +
+                  `respSent=${r.responsesSent} consent=${r.consentRequestsSent} sent=${r.bytesSent} recv=${r.bytesReceived} rtt=${r.currentRoundTripTime ?? "-"}`,
+              );
+            }
+            if (r.type === "transport") transport = r;
+          });
+          console.warn(
+            `🔬 ${ts()} ICE diagnostics (${reason}) ` +
+              JSON.stringify({
+                ice: pc.iceConnectionState,
+                conn: pc.connectionState,
+                gathering: pc.iceGatheringState,
+                signaling: pc.signalingState,
+                transport: transport && {
+                  ice: transport.iceState,
+                  dtls: transport.dtlsState,
+                  selectedPair: transport.selectedCandidatePairId || null,
+                },
+                local: localCands,
+                remote: remoteCandidateStats.current,
+                pairCount: pairs.length,
+              }),
+          );
+          console.warn("🔬 pairs:\n" + (pairs.length ? pairs.join("\n") : "(none)"));
+        } catch (e) {
+          console.warn("🔬 diagnostics failed:", e.message);
+        }
       };
+
+      const slowTimer = setTimeout(() => {
+        if (!["connected", "closed"].includes(pc.connectionState)) {
+          dumpIceDiagnostics("not connected after 8s");
+        }
+      }, 8000);
+      pc.addEventListener("connectionstatechange", () => {
+        if (["connected", "closed", "failed"].includes(pc.connectionState)) {
+          clearTimeout(slowTimer);
+        }
+      });
 
       pc.addEventListener("iceconnectionstatechange", () => {
         if (["disconnected", "failed"].includes(pc.iceConnectionState)) {
@@ -1002,16 +1116,15 @@ export const CallProvider = ({ children }) => {
           noiseSuppression: false,
           autoGainControl: false,
         },
-        // Chromium hints; browsers that don't know them ignore them
-        selfBrowserSurface: "exclude", // hides the call tab, which would feed the other person's voice back to them
-        suppressLocalAudioPlayback: true, // you don't hear the shared tab twice
+        selfBrowserSurface: "exclude",
+        suppressLocalAudioPlayback: true,
         systemAudio: "include",
       });
     } catch (err) {
       if (err?.name !== "NotAllowedError" && err?.name !== "AbortError") {
         showNotice("Could not start screen sharing.", "warning");
       }
-      return; // the person closed the picker
+      return;
     }
 
     const track = display.getVideoTracks()[0];
@@ -1068,6 +1181,8 @@ export const CallProvider = ({ children }) => {
         (candidate.candidate?.match(/ typ (\w+)/) || [])[1] || "unknown";
       remoteCandidateStats.current[type] =
         (remoteCandidateStats.current[type] || 0) + 1;
+      const f = (candidate.candidate || "").split(" ");
+      console.log(`📥 remote candidate ${type}/${f[2] || "?"} ${maskAddr(f[4])}`);
     } catch (e) {
       console.error("ICE Error:", e, candidate?.candidate);
     }

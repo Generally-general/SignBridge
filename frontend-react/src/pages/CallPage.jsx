@@ -28,6 +28,7 @@ import { useSpatialTouch } from "../hooks/useSpatialTouch";
 import { usePointerMode } from "../hooks/usePointerMode";
 import { usePointerPrefs } from "../hooks/usePointerPrefs";
 import { usePictureInPicture } from "../hooks/usePictureInPicture";
+import { useWakeLock } from "../hooks/useWakeLock";
 import { PointerOverlay } from "../components/video/PointerOverlay";
 import { ReactionTray } from "../components/video/ReactionTray";
 import { TouchEffects } from "../components/video/TouchEffects";
@@ -290,6 +291,8 @@ export const CallPage = () => {
     cameraEnabled,
     endCall,
   );
+
+  useWakeLock(!!activeCall);
 
   if (!activeCall) return null;
 

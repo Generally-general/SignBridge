@@ -8,6 +8,7 @@ import {
   saveAlertPrefs,
 } from "../../utils/callAlerts";
 import { SettingRow, SettingsSection, Toggle } from "./controls";
+import { pushService, pushSupported } from "../../services/pushService";
 
 const OPTIONS = [
   {
@@ -48,6 +49,25 @@ export const CallAlertsCard = () => {
       : "unsupported",
   );
   const [testing, setTesting] = useState(false);
+
+  const [pushOn, setPushOn] = useState(false);
+   const [pushError, setPushError] = useState("");
+   useEffect(() => {
+     if (pushSupported()) pushService.isSubscribed().then(setPushOn).catch(() => {});
+   }, []);
+   const togglePush = async (on) => {
+     setPushError("");
+     try {
+       if (on) await pushService.enable();
+       else await pushService.disable();
+       setPushOn(on);
+       setPermission(window.Notification?.permission ?? "unsupported");
+     } catch (e) {
+       setPushError(e.message);
+     }
+   };
+
+
   const timer = useRef(null);
 
   useEffect(
@@ -96,6 +116,20 @@ export const CallAlertsCard = () => {
           />
         </SettingRow>
       ))}
+
+      {pushSupported() && (
+        <SettingRow
+          title="Missed-call alerts when the app is closed"
+          hint="A notification when someone calls while SignBridge is not open. On iPhone, add the site to your Home Screen first."
+        >
+          <Toggle
+            label="Missed-call alerts when the app is closed"
+            checked={pushOn}
+            onChange={togglePush}
+          />
+        </SettingRow>
+      )}
+      {pushError && <p className="px-4 text-[12px] text-warning">{pushError}</p>}
 
       <div className="p-4 space-y-3">
         {prefs.notify && permission === "denied" && (
