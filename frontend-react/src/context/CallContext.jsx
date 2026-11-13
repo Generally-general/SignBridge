@@ -137,6 +137,7 @@ export const CallProvider = ({ children }) => {
   const iceQueue = useRef([]);
   const earlyIce = useRef({});
   const remoteCandidateStats = useRef({});
+  const sentCandidates = useRef([]);
   const acquiredStreams = useRef(new Set());
   const resetCallStateRef = useRef(null);
   const callConnectedRef = useRef(false);
@@ -799,6 +800,7 @@ export const CallProvider = ({ children }) => {
             );
             return;
           }
+          sentCandidates.current.push(event.candidate.toJSON());
           s.emit("ice-candidate", {
             roomId: currentCall.roomId,
             toUserId: currentCall.id,
@@ -1328,6 +1330,23 @@ export const CallProvider = ({ children }) => {
             new RTCSessionDescription(data.answer),
           );
           await flushIceQueue();
+          if (
+            !activeCallRef.current?.isIncoming &&
+            sentCandidates.current.length &&
+            socket.current
+          ) {
+            console.log(
+              `🔁 Re-sending ${sentCandidates.current.length} local ICE candidate(s) after answer`,
+            );
+            for (const c of sentCandidates.current) {
+              socket.current.emit("ice-candidate", {
+                roomId: activeCallRef.current.roomId,
+                toUserId: activeCallRef.current.id,
+                candidate: c,
+              });
+            }
+            sentCandidates.current = [];
+          }
           const pc = peerConnection.current;
           if (needsRenegotiate.current && pc?.signalingState === "stable") {
             needsRenegotiate.current = false;
@@ -1695,6 +1714,7 @@ export const CallProvider = ({ children }) => {
       setTranslationText("");
       setChatMessages([]);
       iceQueue.current = [];
+      sentCandidates.current = [];
       stopAllMedia("starting new call");
       const stream = trackStream(
         await navigator.mediaDevices.getUserMedia(callMediaConstraints()),
