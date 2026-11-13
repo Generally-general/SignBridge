@@ -1777,10 +1777,15 @@ export const CallProvider = ({ children }) => {
   const answerCall = useCallback(async () => {
     if (!activeCall) return;
 
-    const acceptP = callService.accept(activeCall.roomId).then(
-      () => null,
-      (e) => e,
-    );
+    callService.accept(activeCall.roomId).catch((e) => {
+      const status = e.response?.status;
+      if (status === 409 || status === 403) {
+        console.warn("Call is no longer available:", e.response?.data?.message);
+        resetCallStateRef.current?.(false); // the call really is over (ended or cancelled)
+      } else {
+        console.warn("Call record (accept) failed; continuing:", e.message);
+      }
+    });
 
     setTranslationText("");
     setChatMessages([]);
@@ -1802,26 +1807,7 @@ export const CallProvider = ({ children }) => {
       }
 
       await setupPeerConnection(stream);
-      
-      const acceptErr = await acceptP;
-      if (acceptErr) {
-        const status = acceptErr.response?.status;
-        if (status === 409 || status === 403) {
-          console.warn(
-            "Call is no longer available:",
-            acceptErr.response?.data?.message,
-          );
-          stopAllMedia("call no longer available");
-          peerConnection.current?.close();
-          peerConnection.current = null;
-          resetCallStateRef.current?.(false);
-          return;
-        }
-        console.warn(
-          "Call record (accept) failed; continuing:",
-          acceptErr.message,
-        );
-      }
+
       socket.current.emit("join-room", { roomId: activeCall.roomId });
 
       if (pendingOffer.current) {
