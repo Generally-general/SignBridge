@@ -135,6 +135,7 @@ export const CallProvider = ({ children }) => {
   const peerConnection = useRef(null);
   const pendingOffer = useRef(null);
   const iceQueue = useRef([]);
+  const earlyIce = useRef({});
   const remoteCandidateStats = useRef({});
   const acquiredStreams = useRef(new Set());
   const resetCallStateRef = useRef(null);
@@ -371,6 +372,7 @@ export const CallProvider = ({ children }) => {
       setTranslationText("");
       setChatMessages([]);
       iceQueue.current = [];
+      earlyIce.current = [];
       pendingOffer.current = null;
       navigate("/");
     },
@@ -776,10 +778,14 @@ export const CallProvider = ({ children }) => {
             `📡 ${ts()} local candidate ${k} ${maskAddr(c.address)} url=${c.url || "-"}`,
           );
           if (!activeCallRef.current?.roomId) {
-            console.warn(`⚠️ ${ts()} candidate NOT sent: no active call roomId yet`);
+            console.warn(
+              `⚠️ ${ts()} candidate NOT sent: no active call roomId yet`,
+            );
           }
         } else {
-          console.log(`🏁 ${ts()} gathering done: ${JSON.stringify(localCands)}`);
+          console.log(
+            `🏁 ${ts()} gathering done: ${JSON.stringify(localCands)}`,
+          );
         }
         const currentCall = activeCallRef.current;
         if (event.candidate && currentCall?.roomId) {
@@ -934,7 +940,9 @@ export const CallProvider = ({ children }) => {
                 pairCount: pairs.length,
               }),
           );
-          console.warn("🔬 pairs:\n" + (pairs.length ? pairs.join("\n") : "(none)"));
+          console.warn(
+            "🔬 pairs:\n" + (pairs.length ? pairs.join("\n") : "(none)"),
+          );
         } catch (e) {
           console.warn("🔬 diagnostics failed:", e.message);
         }
@@ -1182,7 +1190,9 @@ export const CallProvider = ({ children }) => {
       remoteCandidateStats.current[type] =
         (remoteCandidateStats.current[type] || 0) + 1;
       const f = (candidate.candidate || "").split(" ");
-      console.log(`📥 remote candidate ${type}/${f[2] || "?"} ${maskAddr(f[4])}`);
+      console.log(
+        `📥 remote candidate ${type}/${f[2] || "?"} ${maskAddr(f[4])}`,
+      );
     } catch (e) {
       console.error("ICE Error:", e, candidate?.candidate);
     }
@@ -1284,10 +1294,11 @@ export const CallProvider = ({ children }) => {
         if (activeCallRef.current && activeCallRef.current.roomId !== roomId)
           return;
 
-        // Save the offer into our Ref immediately
         pendingOffer.current = offer;
 
         iceQueue.current = [];
+        console.log(`🧊 ${iceQueue.current.length} early ICE candidate(s) kept for ${roomId}`);
+        earlyIce.current = {};
         const incomingCall = {
           id: fromId,
           contactName: fromName,
@@ -1330,9 +1341,14 @@ export const CallProvider = ({ children }) => {
 
     socket.current.on("ice-candidate", async (data) => {
       const currentRoom = activeCallRef.current?.roomId;
-      if (!currentRoom || data.roomId !== currentRoom) {
+      if (!currentRoom) {
+        const list = (earlyIce.current[data.roomId] ||= []);
+        if (list.length < 200) list.push(data.candidate);
+        return;
+      }
+      if (data.roomId !== currentRoom) {
         console.log(
-          `🧊 Ignoring ICE candidate for room ${data.roomId} (active: ${currentRoom ?? "none"})`,
+          `🧊 Ignoring ICE candidate for room ${data.roomId} (active: ${currentRoom})`,
         );
         return;
       }
