@@ -68,6 +68,9 @@ export const CallPage = () => {
     remoteSkelRef,
     skelStats,
     sendAttention,
+    toggleMic,
+    toggleCamera,
+    chatMessages,
   } = useContext(CallContext);
 
   const chatScrollRef = useRef(null);
@@ -284,13 +287,18 @@ export const CallPage = () => {
     }
   };
 
-  usePictureInPicture(
-    !!remoteStream || !!remoteScreenStream,
-    remoteScreenStream || remoteStream,
+  usePictureInPicture({
+    active: !!remoteStream || !!remoteScreenStream,
+    mainStream: remoteScreenStream || remoteStream,
     localStream,
     cameraEnabled,
-    endCall,
-  );
+    micEnabled,
+    toggleMic,
+    toggleCamera,
+    chatMessages,
+    contactName: activeCall?.contactName,
+    onEndCall: endCall,
+  });
 
   useWakeLock(!!activeCall);
 

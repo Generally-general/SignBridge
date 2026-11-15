@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
+import { Smile } from "lucide-react";
 import { useCall } from "../../hooks/useCall";
 import { EMOJI_FONT, REACTIONS } from "../../utils/touchEffects";
 
@@ -91,9 +92,9 @@ export const ReactionTray = () => {
         aria-expanded={open}
         aria-label={open ? "Close reactions" : "Open reactions"}
         title="Reactions"
-        className={`${btn} ${open ? "bg-primary/15" : ""}`}
+        className={`${btn} text-text-secondary ${open ? "bg-primary/15 text-primary" : ""}`}
       >
-        😊
+        <Smile size={20} strokeWidth={1.75} />
       </button>
     </div>
   );
